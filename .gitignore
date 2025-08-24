@@ -1,0 +1,106 @@
+# CMake build directories and files
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+*.ninja
+build.ninja
+compile_commands.json
+
+# Pico SDK build artifacts
+*.uf2
+*.elf
+*.bin
+*.hex
+*.dis
+*.map
+*.a
+*.o
+*.so
+*.dylib
+*.dll
+
+# PIO generated headers
+*.pio.h
+gblcd.pio.h
+
+# VS Code settings (keep project-specific, ignore user-specific)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/c_cpp_properties.json
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.orig
+
+# Pico SDK dependencies (if downloaded locally)
+pico-sdk/
+picotool/
+_deps/
+
+# Generated documentation
+docs/build/
+*.pdf
+
+# Python cache (for any utility scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Test files and artifacts
+test_output/
+*.test
+
+# Environment files
+.env
+.env.local
+
+# Windows specific
+*.lnk
+ehthumbs.db
+Desktop.ini
+
+# macOS specific
+.AppleDouble
+.LSOverride
+Icon?
+
+# Linux specific
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Backup files from editors
+*~
+*.swp
+*.swo
+.#*
+#*#
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Project specific ignores
+# Uncomment if you have these:
+# config.h.in
+# version.h.in
