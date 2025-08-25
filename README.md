@@ -1,4 +1,7 @@
+
 # DMG Boy Display: Real-Time Game Boy LCD Capture System
+
+> **Note:** Schematic coming soon!
 
 A high-performance Game Boy LCD capture and display system for the Raspberry Pi Pico, supporting multiple TFT display types with hardware-accelerated PIO capture and DMA-optimized rendering.
 

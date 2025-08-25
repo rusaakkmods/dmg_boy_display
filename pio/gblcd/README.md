@@ -139,4 +139,3 @@ For questions, issues, or contributions:
 
 ---
 
-*This PIO program represents hundreds of hours of reverse engineering, timing analysis, and optimization to achieve perfect Game Boy LCD compatibility.*
