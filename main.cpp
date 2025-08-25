@@ -7,9 +7,9 @@
 #include "gblcd.pio.h"
 
 // Choose display type: uncomment one of these lines
-//#define USE_ST7789
+#define USE_ST7789
 //#define USE_ILI9341
-#define USE_ST7796
+//#define USE_ST7796
 
 #ifdef USE_ST7789
     #include "displays/st7789/st7789.hpp"
@@ -201,10 +201,10 @@ int main() {
     // palette
 #ifdef USE_ST7789
     static const uint16_t gb_colors[4] = {
-        0x670F,  // Lightest green - #67e767ff (background)
-        0x560C,  // Light green - #56b556ff (brighter)
-        0x1A23,  // Dark green - #1a341aff (darker)
-        0x0800   // Darkest green - #081808ff (much darker)
+        0x9772,  // Bright saturated green - much more vibrant background
+        0x64ED,  // Rich medium green - deeper saturation
+        0x2A85,  // Dark forest green - good contrast
+        0x1082   // Very dark green - strong contrast
     };
 #elif defined(USE_ILI9341)
     static const uint16_t gb_colors[4] = {
