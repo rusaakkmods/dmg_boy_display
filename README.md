@@ -80,12 +80,12 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 ### Display Connection (SPI)
 | Signal | Pico Pin | Description |
 |--------|----------|-------------|
-| MOSI   | GPIO 19  | SPI Data Output |
-| SCK    | GPIO 18  | SPI Clock |
-| CS     | GPIO 17  | Chip Select |
-| DC     | GPIO 20  | Data/Command |
-| RESET  | GPIO 15  | Display Reset |
-| BL     | GPIO 10  | Backlight Control |
+| MOSI   | GPIO 11  | SPI Data Output |
+| SCK    | GPIO 10  | SPI Clock |
+| CS     | GPIO 9   | Chip Select |
+| DC     | GPIO 12  | Data/Command |
+| RESET  | GPIO 13  | Display Reset |
+| BL     | GPIO 8   | Backlight Control |
 
 ## 🚀 Quick Start
 
@@ -169,12 +169,12 @@ make -j4
 ### Custom Pin Mapping
 Modify pin assignments in `main.cpp`:
 ```cpp
-config.pin_din = 19;    // MOSI
-config.pin_sck = 18;    // SCK
-config.pin_cs = 17;     // CS
-config.pin_dc = 20;     // DC
-config.pin_reset = 15;  // RESET
-config.pin_bl = 10;     // Backlight
+config.pin_din = 11;    // MOSI
+config.pin_sck = 10;    // SCK
+config.pin_cs = 9;      // CS
+config.pin_dc = 12;     // DC
+config.pin_reset = 13;  // RESET
+config.pin_bl = 8;      // Backlight
 ```
 
 ### SPI Speed Tuning

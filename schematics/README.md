@@ -1,5 +1,15 @@
-# DMG Boy Display - Schematic & PCB Design
-
+# DMG Boy Display - Schematic & P### TFT Display Connection (LCD?)
+The SPI TFT display connects directly to Raspberry Pi Pico pins:
+| Signal | Pico GPIO | Description | Voltage Notes |
+|--------|-----------|-------------|---------------|
+| **VCC** | **3V3/5V** | **Power supply** | **⚠️ See power requirements below** |
+| GND | GND | Ground | - |
+| CS | GP9 | Chip select | 3.3V logic |
+| RESET | GP13 | Display reset | 3.3V logic |
+| DC | GP12 | Data/command | 3.3V logic |
+| MOSI | GP11 | SPI data | 3.3V logic |
+| SCK | GP10 | SPI clock | 3.3V logic |
+| BL | GP8 | Backlight control | 3.3V logic |
 This folder contains the complete KiCad project files for the DMG Boy Display PCB.
 
 ## 📋 Schematic Preview

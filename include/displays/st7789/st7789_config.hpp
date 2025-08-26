@@ -61,14 +61,14 @@ struct Config {
     
     // Constructor with default values
     Config() : 
-        spi_inst(spi0),
+        spi_inst(spi1),
         spi_speed_hz(40 * 1000 * 1000),  // 40MHz
-        pin_din(19),
-        pin_sck(18),
-        pin_cs(17),
-        pin_dc(20),
-        pin_reset(15),
-        pin_bl(10),
+        pin_din(11),
+        pin_sck(14),
+        pin_cs(9),
+        pin_dc(12),
+        pin_reset(13),
+        pin_bl(8),
         width(240),
         height(320),
         rotation(ROTATION_0),  // Default rotation is 0 degrees

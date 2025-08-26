@@ -7,9 +7,9 @@
 #include "gblcd.pio.h"
 
 // Choose display type: uncomment one of these lines
-#define USE_ST7789
+//#define USE_ST7789
 //#define USE_ILI9341
-//#define USE_ST7796
+#define USE_ST7796
 
 #ifdef USE_ST7789
     #include "displays/st7789/st7789.hpp"
@@ -91,13 +91,13 @@ int main() {
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ST7789
     config.width = 240;
     config.height = 240;
-    config.spi_inst = spi0;
-    config.pin_din = 19;    // MOSI
-    config.pin_sck = 18;    // SCK
-    config.pin_cs = 17;     // CS
-    config.pin_dc = 20;     // DC
-    config.pin_reset = 15;  // RESET
-    config.pin_bl = 10;     // Backlight
+    config.spi_inst = spi1;
+    config.pin_din = 11;    // MOSI
+    config.pin_sck = 10;    // SCK
+    config.pin_cs = 9;     // CS
+    config.pin_dc = 12;     // DC
+    config.pin_reset = 13;  // RESET
+    config.pin_bl = 8;     // Backlight
     config.rotation = st7789::ROTATION_0;
     config.dma.enabled = true;
     config.dma.buffer_size = 480;  // 240 pixels * 2 bytes = 480 bytes per line
@@ -109,13 +109,13 @@ int main() {
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ILI9341 (same as ST7789)
     config.width = 240;
     config.height = 320;
-    config.spi_inst = spi0;
-    config.pin_din = 19;    // MOSI
-    config.pin_sck = 18;    // SCK
-    config.pin_cs = 17;     // CS
-    config.pin_dc = 20;     // DC
-    config.pin_reset = 15;  // RESET
-    config.pin_bl = 10;     // Backlight
+    config.spi_inst = spi1;
+    config.pin_din = 11;    // MOSI
+    config.pin_sck = 10;    // SCK
+    config.pin_cs = 9;     // CS
+    config.pin_dc = 12;     // DC
+    config.pin_reset = 13;  // RESET
+    config.pin_bl = 8;     // Backlight
     config.rotation = ili9341::ROTATION_0;
     config.dma.enabled = true;
     config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes (double buffer for speed)
@@ -127,13 +127,13 @@ int main() {
     config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz for ST7796 (higher speed for better frame rate)
     config.width = 320;
     config.height = 480;
-    config.spi_inst = spi0;
-    config.pin_din = 19;    // MOSI
-    config.pin_sck = 18;    // SCK
-    config.pin_cs = 17;     // CS
-    config.pin_dc = 20;     // DC
-    config.pin_reset = 15;  // RESET
-    config.pin_bl = 10;     // Backlight
+    config.spi_inst = spi1;
+    config.pin_din = 11;    // MOSI
+    config.pin_sck = 10;    // SCK
+    config.pin_cs = 9;     // CS
+    config.pin_dc = 12;     // DC
+    config.pin_reset = 13;  // RESET
+    config.pin_bl = 8;     // Backlight
     config.rotation = st7796::ROTATION_180;  // 180 degrees for ST7796
     config.dma.enabled = true;
     config.dma.buffer_size = 4096;  // 4KB buffer for ST7796 (larger buffer for better frame rate)
