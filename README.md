@@ -1,7 +1,7 @@
 
 # DMG Boy Display: Real-Time Game Boy LCD Capture System
 
-> **Note:** Schematic coming soon!
+📋 **[Complete PCB Schematics & BOM Available](schematics/)**
 
 A high-performance Game Boy LCD capture and display system for the Raspberry Pi Pico, supporting multiple TFT display types with hardware-accelerated PIO capture and DMA-optimized rendering.
 
@@ -60,6 +60,12 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 ### Raspberry Pi Pico
 - RP2040 microcontroller
 - Standard Pico board or Pico W
+
+### PCB & Components
+📋 **[Complete schematics, PCB design, and BOM](schematics/)** available in KiCad format
+- Custom PCB recommended for reliable connections
+- Through-hole components for easy assembly
+- All parts available from common distributors
 
 ### Game Boy Connection (DMG-01 Flex Cable)
 | Signal | GameBoy LCD Connector | Pico Pin | Description |

@@ -28,6 +28,80 @@ compile_commands.json
 *.pio.h
 gblcd.pio.h
 
+# KiCad specific files to ignore
+## KiCad backup and temporary files
+*.bak
+*-bak
+*-backups/
+*.kicad_pcb-bak
+*.sch-bak
+*-cache.lib
+*-rescue.lib
+*-save.pro
+*-save.kicad_pro
+*.net
+*.tmp
+*~
+
+## KiCad auto-generated files
+*.csv
+*.tsv
+*.xml
+*.gbr
+*.drl
+*.pdf
+*.ps
+*.svg
+*.plt
+*.pos
+*.rpt
+*.step
+*.stp
+*.wrl
+*.x3d
+
+## KiCad generated documentation and outputs
+**/gerbers/
+**/fabrication/
+**/assembly/
+**/plots/
+**/exports/
+*-job.gbrjob
+*-NPTH.drl
+*-PTH.drl
+*-F_Cu.gbr
+*-B_Cu.gbr
+*-F_Mask.gbr
+*-B_Mask.gbr
+*-F_SilkS.gbr
+*-B_SilkS.gbr
+*-F_Paste.gbr
+*-B_Paste.gbr
+*-Edge_Cuts.gbr
+
+## KiCad lock files
+*.lck
+.#*
+
+## KiCad 3D model cache
+**/packages3d/
+*.3dshapes/
+
+## KiCad footprint info cache
+fp-info-cache
+
+## KiCad symbol library cache
+sym-lib-table
+
+# Essential KiCad files to KEEP (commented for clarity):
+# *.kicad_pro     - Project file
+# *.kicad_sch     - Schematic files  
+# *.kicad_pcb     - PCB layout file
+# *.kicad_sym     - Symbol library
+# *.kicad_mod     - Footprint files
+# sym-lib-table   - Symbol library table (if customized)
+# fp-lib-table    - Footprint library table (if customized)
+
 # VS Code settings (keep project-specific, ignore user-specific)
 .vscode/settings.json
 .vscode/launch.json
