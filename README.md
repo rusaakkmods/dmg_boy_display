@@ -5,6 +5,25 @@
 
 A high-performance Game Boy LCD capture and display system for the Raspberry Pi Pico, supporting multiple TFT display types with hardware-accelerated PIO capture and DMA-optimized rendering.
 
+## 📸 Preview Gallery
+
+| ST7789 (240x240) | ILI9341 (240x320) | ST7796 (320x480) |
+|:-----------------:|:------------------:|:-----------------:|
+| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ST7796](preview/st7796.jpg) |
+| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned |
+
+📁 **More photos and videos in the [preview/](preview/) folder**
+
+## 📱 Follow My Projects
+
+**🔥 Follow [@rusaakkmods](https://www.instagram.com/rusaakkmods/) on Instagram for more retro gaming mods and electronics projects!**
+
+👍 **Like and follow for:**
+- Behind-the-scenes development
+- New project updates  
+- Retro gaming modifications
+- Electronics tutorials
+
 ## 🎮 What It Does
 
 This project captures the LCD data from a Game Boy (DMG) in real-time and displays it on modern TFT screens with the following features:
@@ -240,5 +259,18 @@ This project is open source. See individual files for license information.
   Please follow his Youtube Channel: https://www.youtube.com/@whatskenmaking
 - To my kooky AI Claude 4 for assisting me with code optimization, also for it's artificial apologize :D
 
+## 📱 Connect With Me
+
+**Follow [@rusaakkmods](https://www.instagram.com/rusaakkmods/) on Instagram!**
+
+🔥 **Like, follow, and stay updated with:**
+- New electronics projects
+- Retro gaming modifications  
+- Development progress
+- Hardware tutorials
+- Behind-the-scenes content
+
 ---
+
+**Made with ❤️ by [@rusaakkmods](https://www.instagram.com/rusaakkmods/)**
 
