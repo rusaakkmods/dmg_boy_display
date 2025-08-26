@@ -7,10 +7,10 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 
 ## 📸 Preview Gallery
 
-| ST7789 (240x240) | ILI9341 (240x320) | ST7796 (320x480) |
-|:-----------------:|:------------------:|:-----------------:|
-| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ST7796](preview/st7796.jpg) |
-| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned |
+| ST7789 (240x240) | ILI9341 (240x320) | ST7796 (320x480) | RP2040-Zero Compact |
+|:-----------------:|:------------------:|:-----------------:|:-------------------:|
+| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
+| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Compact 60% Smaller Build |
 
 📁 **More photos and videos in the [preview/](preview/) folder**
 

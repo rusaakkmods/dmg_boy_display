@@ -16,8 +16,13 @@ This folder contains preview images and videos of the DMG Boy Display project in
 ![ST7796 Display](st7796.jpg)
 *ST7796 320x480 display showing Game Boy content with 2x scaling*
 
+### RP2040-Zero Compact Build
+![RP2040-Zero Build](rp2040-Zero.jpg)
+*Compact build using Waveshare RP2040-Zero for minimal footprint*
+
 ## 🎥 Video Demo
 - `preview.mp4` - Video demonstration of the system in action
+- `rp2040-Zero_preview.mp4` - RP2040-Zero compact build demonstration
 
 ## 📱 Follow for More Projects
 
@@ -34,11 +39,19 @@ This folder contains preview images and videos of the DMG Boy Display project in
 
 ## 🛠️ Hardware Specifications
 
-All images show the same Game Boy LCD capture system running on:
+All images show the same Game Boy LCD capture system with different configurations:
+
+### Standard Pico Build
 - **Raspberry Pi Pico** (RP2040)
 - **Real-time PIO capture** from Game Boy DMG-01
 - **Hardware DMA acceleration** for smooth frame rates
 - **Authentic Game Boy color palettes**
+
+### Compact RP2040-Zero Build  
+- **Waveshare RP2040-Zero** (23.5×18mm)
+- **60% smaller** than standard Pico
+- **Same performance** and capabilities
+- **Ideal for portable/embedded applications**
 
 ## 📐 Display Comparisons
 
