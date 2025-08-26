@@ -42,8 +42,15 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 - RP2040 microcontroller
 - Standard Pico board or Pico W
 
-### Game Boy Connection
-Connect Game Boy LCD signals to Pico GPIO pins (see PIO documentation)
+### Game Boy Connection (DMG-01 Flex Cable)
+| Signal | GameBoy LCD Connector | Pico Pin | Description |
+|--------|----------------------|----------|-------------|
+| GND | Pin 21 | GND | Ground |
+| Pixel Clock | Pin 14 | GP2 | LCD pixel clock signal |
+| Data 0 | Pin 15 | GP3 | LCD data bit 0 |
+| Data 1 | Pin 16 | GP4 | LCD data bit 1 |
+| Vertical Sync | Pin 12 | GP5 | LCD vertical sync signal |
+| Regulated +5V | Pin 11 | VSYS | Power Supply |
 
 ### Display Connection (SPI)
 | Signal | Pico Pin | Description |
