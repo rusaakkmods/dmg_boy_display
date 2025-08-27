@@ -1,4 +1,5 @@
 
+
 # DMG Boy Display: Real-Time Game Boy LCD Capture System
 
 📋 **[Complete PCB Schematics & BOM Available](schematics/)**
@@ -7,12 +8,13 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 
 ## 📸 Preview Gallery
 
+
 | ST7789 (240x240) | ILI9341 (240x320) | ILI9342 (240x320) | ST7796 (320x480) | RP2040-Zero Compact |
 |:-----------------:|:------------------:|:------------------:|:-----------------:|:-------------------:|
-| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | *(add ili9342 image if available)* | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
+| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ILI9342](preview/ili9342.jpg) | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
 | 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Compact 60% Smaller Build |
 
-📁 **More photos and videos in the [preview/](preview/) folder**
+📁 **More photos and videos, including new preview images, are available in the [preview/](preview/) folder**
 
 ## 📱 Follow My Projects
 
@@ -63,8 +65,11 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 - **Position**: Top aligned
 - **Features**: Enhanced performance optimizations
 
-### Dithering Mode for Monochrome Displays
-For monochrome (1-bit) display output, a dithering mode is available. This simulates grayscale using ordered dithering patterns, improving the visual quality on black-and-white screens. Enable this in the display configuration for best results on monochrome hardware.
+
+### Black & White (Monochrome) Feature for OLED/Monochrome Displays
+For future OLED and other monochrome (1-bit) display support, a new black-and-white mode is available. This mode uses a simple, fast 8x8 Bayer ordered dithering algorithm (instead of the more CPU-intensive Floyd-Steinberg method) to simulate grayscale on black-and-white screens. This approach is chosen for its efficiency and suitability for microcontrollers, making it ideal for OLED and similar displays. Enable this in the display configuration for best results on monochrome hardware.
+
+> **Note:** The Bayer dither is much less CPU-intensive than Floyd-Steinberg, making it a better fit for real-time applications on the RP2040.
 
 ## 🔧 Hardware Requirements
 

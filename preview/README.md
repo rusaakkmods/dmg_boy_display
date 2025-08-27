@@ -14,7 +14,7 @@ This folder contains preview images and videos of the DMG Boy Display project in
 
 
 ### ILI9342 Display (240x320) *(New!)*
-*(Add ili9342.jpg if available)*
+![ILI9342 Display](ili9342.jpg)
 *ILI9342 240x320 display showing Game Boy content with 1.5x scaling*
 
 ### ST7796 Display (320x480)
@@ -69,9 +69,12 @@ All images show the same Game Boy LCD capture system with different configuratio
 
 ---
 
-## Dithering Mode for Monochrome Displays
 
-A dithering mode is available for monochrome (1-bit) display output. This simulates grayscale using ordered dithering patterns, improving the visual quality on black-and-white screens. Enable this in the display configuration for best results on monochrome hardware.
+## Black & White (Monochrome) Feature for OLED/Monochrome Displays
+
+A new black-and-white mode is now available for future OLED and other monochrome (1-bit) display support. This mode uses a simple, fast 8x8 Bayer ordered dithering algorithm (instead of the more CPU-intensive Floyd-Steinberg method) to simulate grayscale on black-and-white screens. This approach is chosen for its efficiency and suitability for microcontrollers, making it ideal for OLED and similar displays. Enable this in the display configuration for best results on monochrome hardware.
+
+> **Note:** The Bayer dither is much less CPU-intensive than Floyd-Steinberg, making it a better fit for real-time applications on the RP2040.
 
 ---
 
