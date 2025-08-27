@@ -10,9 +10,9 @@
 
 // Choose display type: uncomment one of these lines
 //#define USE_ST7789
-//#define USE_ILI9341
+#define USE_ILI9341
 //#define USE_ILI9342
-#define USE_ST7796
+//#define USE_ST7796
 
 // Uncomment to enable dithering for monochrome display
 //#define ENABLE_BW_DITHER
@@ -123,18 +123,20 @@ static inline void build_maps(void) {
 
     for (int x = 0; x < SCALED_W; x++) {
         int sx;
-        if (DISPLAY_SCALE == 1.5) sx = (x * 2) / 3;
-        else if (DISPLAY_SCALE == 2) sx = x / 2;
-        else  sx = x;
+    if (DISPLAY_SCALE == 1.5) sx = (x * 2) / 3;
+    else if (DISPLAY_SCALE == 2) sx = x / 2;
+    else if (DISPLAY_SCALE == 0.8) sx = (x * 5) / 4; // upscale from 0.8 -> source index = x / 0.8 = x * 1.25 = x * 5/4
+    else  sx = x;
 
         if (sx >= DMG_W) sx = DMG_W - 1;
         xmap[x] = sx;
     }
     for (int y = 0; y < SCALED_H; y++) {
         int sy;
-        if (DISPLAY_SCALE == 1.5) sy = (y * 2) / 3;
-        else if (DISPLAY_SCALE == 2) sy = y / 2;
-        else  sy = y;
+    if (DISPLAY_SCALE == 1.5) sy = (y * 2) / 3;
+    else if (DISPLAY_SCALE == 2) sy = y / 2;
+    else if (DISPLAY_SCALE == 0.8) sy = (y * 5) / 4; // upscale from 0.8 -> source index = y / 0.8 = y * 1.25
+    else  sy = y;
 
         if (sy >= DMG_H) sy = DMG_H - 1;
         ymap[y] = sy;
@@ -246,7 +248,13 @@ int main() {
             }
         }
 
-        if (DISPLAY_SCALE > 1) {
+        if (DISPLAY_SCALE == 1) {
+            //no-scaling
+            for (int i = 0; i < DMG_W * DMG_H; i++) {
+                scaledBuf[i] = screenBuffer[i];
+            }
+        }
+        else {
             for (int dy = 0; dy < SCALED_H; dy++) {
                 const uint16_t* srcRow = &screenBuffer[ ymap[dy] * DMG_W ];
                 uint16_t* dstRow = &scaledBuf[ dy * SCALED_W ];
@@ -264,12 +272,6 @@ int main() {
                 for (; dx < SCALED_W; dx++) {
                     dstRow[dx] = srcRow[xmap[dx]];
                 }
-            }
-        }
-        else {
-            //no-scaling
-            for (int i = 0; i < DMG_W * DMG_H; i++) {
-                scaledBuf[i] = screenBuffer[i];
             }
         }
         
