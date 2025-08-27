@@ -43,7 +43,8 @@ struct DmaConfig {
 // Display type enumeration
 enum DisplayType {
     DISPLAY_ST7789,
-    DISPLAY_ILI9341
+    DISPLAY_ILI9341,
+    DISPLAY_ILI9342
 };
 
 // Common configuration structure for all displays
@@ -87,6 +88,16 @@ struct Config {
         Config config;
         config.display_type = DISPLAY_ILI9341;
         config.spi_speed_hz = 25 * 1000 * 1000;  // 25MHz for ILI9341
+        config.width = 240;
+        config.height = 320;
+        return config;
+    }
+
+    // Constructor for ILI9342 with appropriate defaults
+    static Config createILI9342Config() {
+        Config config;
+        config.display_type = DISPLAY_ILI9342;
+        config.spi_speed_hz = 25 * 1000 * 1000;  // 25MHz for ILI9342 (adjust if needed)
         config.width = 240;
         config.height = 320;
         return config;

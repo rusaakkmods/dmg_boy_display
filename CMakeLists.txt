@@ -44,6 +44,9 @@ add_executable(dmg_boy_display
     src/displays/ili9341/ili9341.cpp
     src/displays/ili9341/ili9341_hal.cpp
     src/displays/ili9341/ili9341_gfx.cpp
+    src/displays/ili9342/ili9342.cpp
+    src/displays/ili9342/ili9342_hal.cpp
+    src/displays/ili9342/ili9342_gfx.cpp
     src/displays/st7796/st7796.cpp
     src/displays/st7796/st7796_hal.cpp
     src/displays/st7796/st7796_gfx.cpp

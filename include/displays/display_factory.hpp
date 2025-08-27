@@ -3,6 +3,7 @@
 #include "display_interface.hpp"
 #include "st7789.hpp"
 #include "ili9341.hpp"
+#include "ili9342.hpp"
 #include <memory>
 
 namespace display {
@@ -21,8 +22,15 @@ public:
                 auto display = std::make_unique<ili9341::ILI9341>();
                 return display;
             }
+            case DISPLAY_ILI9342: {
+                auto display = std::make_unique<ili9342::ILI9342>();
+                return display;
+            }
             default:
                 return nullptr;
+    static std::unique_ptr<DisplayInterface> createILI9342() {
+        return std::make_unique<ili9342::ILI9342>();
+    }
         }
     }
     

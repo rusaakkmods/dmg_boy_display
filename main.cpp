@@ -4,12 +4,23 @@
 #include "include/logo.h"
 #include <stdbool.h>
 #include "hardware/pio.h"
+#include "hardware/spi.h"
 #include "gblcd.pio.h"
 #include "dither.hpp"
 
+#define SPI_CHANNEL spi1
+#define PIN_MOSI 11
+#define PIN_SCK 10
+#define PIN_CS 9
+#define PIN_DC 12
+#define PIN_RESET 13
+#define PIN_BL 8
+
 // Choose display type: uncomment one of these lines
+
 //#define USE_ST7789
-#define USE_ILI9341
+//#define USE_ILI9341
+#define USE_ILI9342
 //#define USE_ST7796
 
 // Uncomment to enable dithering for monochrome display
@@ -19,15 +30,26 @@
 static const uint16_t BW_BLACK = 0x0000;
 static const uint16_t BW_WHITE = 0xFFFF;
 
+
 #ifdef USE_ST7789
     #include "displays/st7789/st7789.hpp"
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
+#elif defined(USE_ILI9342)
+    #include "displays/ili9342/ili9342.hpp"
 #elif defined(USE_ST7796)
     #include "displays/st7796/st7796.hpp"
 #else
-    #error "Please define USE_ST7789, USE_ILI9341, or USE_ST7796"
+    #error "Please define USE_ST7789, USE_ILI9341, USE_ILI9342, or USE_ST7796"
 #endif
+
+// Pin definitions
+#define PIN_MOSI 11
+#define PIN_SCK 10
+#define PIN_CS 9
+#define PIN_DC 12
+#define PIN_RESET 13
+#define PIN_BL 8
 
 #define DMG_W 160
 #define DMG_H 144
@@ -38,6 +60,8 @@ static const uint16_t BW_WHITE = 0xFFFF;
     #define SCALED_W 240
     #define SCALED_H 216
     #define Y_OFF 12 // vertically centered
+    #define H_OFF 0
+
 
 #elif defined(USE_ILI9341)
     #define LCD_W 240
@@ -45,6 +69,15 @@ static const uint16_t BW_WHITE = 0xFFFF;
     #define SCALED_W 240
     #define SCALED_H 216
     #define Y_OFF 0 //top most
+    #define H_OFF 0
+
+#elif defined(USE_ILI9342)
+    #define LCD_W 320
+    #define LCD_H 240
+    #define SCALED_W 240
+    #define SCALED_H 216
+    #define Y_OFF 12 // vertically centered
+    #define H_OFF 40
 
 #elif defined(USE_ST7796)
     #define LCD_W 320
@@ -52,9 +85,8 @@ static const uint16_t BW_WHITE = 0xFFFF;
     #define SCALED_W 320
     #define SCALED_H 288
     #define Y_OFF 0  // Top aligned
+    #define H_OFF 0
 #endif
-
-
 
 // Optional: precompute x/y maps once (integer NN: floor((dst*2)/3))
 static int xmap[SCALED_W];
@@ -92,61 +124,50 @@ int main() {
     
     printf("Starting Game Boy LCD capture...\n");
     
-    // Create display instance and configure based on type
+
+    // Common display config
 #ifdef USE_ST7789
     st7789::ST7789 lcd;
     st7789::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ST7789
-    config.width = LCD_W;
-    config.height = LCD_H;
-    config.spi_inst = spi1;
-    config.pin_din = 11;    // MOSI
-    config.pin_sck = 10;    // SCK
-    config.pin_cs = 9;     // CS
-    config.pin_dc = 12;     // DC
-    config.pin_reset = 13;  // RESET
-    config.pin_bl = 8;     // Backlight
     config.rotation = st7789::ROTATION_0;
-    config.dma.enabled = true;
     config.dma.buffer_size = 480;  // 240 pixels * 2 bytes = 480 bytes per line
     printf("Using ST7789 display (240x240)\n");
-    
 #elif defined(USE_ILI9341)
     ili9341::ILI9341 lcd;
     ili9341::Config config;
-    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ILI9341 (same as ST7789)
-    config.width = LCD_W;
-    config.height = LCD_H;
-    config.spi_inst = spi1;
-    config.pin_din = 11;    // MOSI
-    config.pin_sck = 10;    // SCK
-    config.pin_cs = 9;     // CS
-    config.pin_dc = 12;     // DC
-    config.pin_reset = 13;  // RESET
-    config.pin_bl = 8;     // Backlight
+    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ILI9341
     config.rotation = ili9341::ROTATION_0;
-    config.dma.enabled = true;
-    config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes (double buffer for speed)
+    config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
     printf("Using ILI9341 display (240x320)\n");
-    
+#elif defined(USE_ILI9342)
+    ili9342::ILI9342 lcd;
+    ili9342::Config config;
+    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ILI9342
+    config.rotation = ili9342::ROTATION_0;
+    config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
+    printf("Using ILI9342 display (320x240)\n");
 #elif defined(USE_ST7796)
     st7796::ST7796 lcd;
     st7796::Config config;
-    config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz for ST7796 (higher speed for better frame rate)
-    config.width = LCD_W;
-    config.height = LCD_H;
-    config.spi_inst = spi1;
-    config.pin_din = 11;    // MOSI
-    config.pin_sck = 10;    // SCK
-    config.pin_cs = 9;     // CS
-    config.pin_dc = 12;     // DC
-    config.pin_reset = 13;  // RESET
-    config.pin_bl = 8;     // Backlight
+    config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz for ST7796
     config.rotation = st7796::ROTATION_180;  // 180 degrees for ST7796
-    config.dma.enabled = true;
-    config.dma.buffer_size = 4096;  // 4KB buffer for ST7796 (larger buffer for better frame rate)
+    config.dma.buffer_size = 4096;  // 4KB buffer for ST7796
     printf("Using ST7796 display (320x480)\n");
 #endif
+
+    // Set common config values
+    config.width = LCD_W;
+    config.spi_inst = SPI_CHANNEL;
+    config.spi_inst = spi1;
+    config.pin_din = PIN_MOSI;
+    config.pin_sck = PIN_SCK;
+    config.pin_cs = PIN_CS;
+    config.pin_dc = PIN_DC;
+    config.pin_reset = PIN_RESET;
+    config.pin_bl = PIN_BL;
+    config.dma.enabled = true;
+
     
     if (!lcd.begin(config)) {
         printf("LCD initialization failed!\n");
@@ -157,6 +178,8 @@ int main() {
     lcd.setRotation(st7789::ROTATION_0);
 #elif defined(USE_ILI9341)
     lcd.setRotation(ili9341::ROTATION_0);
+#elif defined(USE_ILI9342)
+    lcd.setRotation(ili9342::ROTATION_0);
 #elif defined(USE_ST7796)
     lcd.setRotation(st7796::ROTATION_180);  // ST7796 uses 180 degrees
     // Set maximum brightness for ST7796
@@ -170,6 +193,8 @@ int main() {
     lcd.clearScreen(st7789::BLACK);
 #elif defined(USE_ILI9341)
     lcd.clearScreen(ili9341::BLACK);
+#elif defined(USE_ILI9342)
+    lcd.clearScreen(ili9342::BLACK);
 #elif defined(USE_ST7796)
     lcd.fillScreen(st7796::BLACK);
 #endif
@@ -182,11 +207,13 @@ int main() {
         uint16_t* logo = (uint16_t*)rMODS_logo_data;
     #endif
 
-    #ifdef USE_ST7796
-        lcd.drawImage(87, 56, 145, 115, logo);
-    #else
-        lcd.drawImage(47, 62, 145, 115, logo);
-    #endif
+
+
+
+// Always center the logo for all displays using RMODS_LOGO_WIDTH and RMODS_LOGO_HEIGHT from logo.h
+int logo_x = (LCD_W - RMODS_LOGO_WIDTH) / 2;
+int logo_y = (LCD_H - RMODS_LOGO_HEIGHT) / 2;
+lcd.drawImage(logo_x, logo_y, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
 
     sleep_ms(1000);
     
@@ -232,6 +259,13 @@ int main() {
 #elif defined(USE_ILI9341)
     static const uint16_t gb_colors[4] = {
         0x4E09,  // Lightest green - #4bc24bff (background)
+        0x3526,  // Light green - #37a537ff
+        0x2384,  // Dark green - #277227ff
+        0x2224   // Darkest green - #234623ff
+    };
+#elif defined(USE_ILI9342)
+    static const uint16_t gb_colors[4] = {
+        0x4E09,  // Lightest green - #4bc24bff (background) (adjust as needed for ILI9342)
         0x3526,  // Light green - #37a537ff
         0x2384,  // Dark green - #277227ff
         0x2224   // Darkest green - #234623ff
@@ -329,7 +363,7 @@ int main() {
     fast_bayer_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
 #endif
 
-    lcd.drawImage(0, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+    lcd.drawImage(H_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
 
         vSyncFallingEdgeDetected = false;
     }
