@@ -8,12 +8,12 @@
 #include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
-#define USE_ST7789
-//#define USE_ILI9341
+//#define USE_ST7789
+#define USE_ILI9341
 //#define USE_ST7796
 
 // Uncomment to enable dithering for monochrome display
-#define ENABLE_BW_DITHER
+//#define ENABLE_BW_DITHER
 
 // BW output constants used by the fast dither path
 static const uint16_t BW_BLACK = 0x0000;
@@ -97,8 +97,8 @@ int main() {
     st7789::ST7789 lcd;
     st7789::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ST7789
-    config.width = 240;
-    config.height = 240;
+    config.width = LCD_W;
+    config.height = LCD_H;
     config.spi_inst = spi1;
     config.pin_din = 11;    // MOSI
     config.pin_sck = 10;    // SCK
@@ -115,8 +115,8 @@ int main() {
     ili9341::ILI9341 lcd;
     ili9341::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz for ILI9341 (same as ST7789)
-    config.width = 240;
-    config.height = 320;
+    config.width = LCD_W;
+    config.height = LCD_H;
     config.spi_inst = spi1;
     config.pin_din = 11;    // MOSI
     config.pin_sck = 10;    // SCK
@@ -133,8 +133,8 @@ int main() {
     st7796::ST7796 lcd;
     st7796::Config config;
     config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz for ST7796 (higher speed for better frame rate)
-    config.width = 320;
-    config.height = 480;
+    config.width = LCD_W;
+    config.height = LCD_H;
     config.spi_inst = spi1;
     config.pin_din = 11;    // MOSI
     config.pin_sck = 10;    // SCK
