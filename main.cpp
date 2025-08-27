@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include "hardware/pio.h"
 #include "gblcd.pio.h"
-#include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
 #define USE_ST7789

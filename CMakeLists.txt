@@ -47,7 +47,6 @@ add_executable(dmg_boy_display
     src/displays/st7796/st7796.cpp
     src/displays/st7796/st7796_hal.cpp
     src/displays/st7796/st7796_gfx.cpp
-    src/dither/dither.cpp
 )
 
 # Generate PIO header
