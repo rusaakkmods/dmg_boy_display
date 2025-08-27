@@ -265,10 +265,10 @@ lcd.drawImage(logo_x, logo_y, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
     };
 #elif defined(USE_ILI9342)
     static const uint16_t gb_colors[4] = {
-        0x4E09,  // Lightest green - #4bc24bff (background) (adjust as needed for ILI9342)
-        0x3526,  // Light green - #37a537ff
-        0x2384,  // Dark green - #277227ff
-        0x2224   // Darkest green - #234623ff
+        0x3e88,  // Lightest green - (background)
+        0x2c05,  // Light green
+        0x1a63,  // Dark green
+        0x08c1   // Darkest green
     };
 #elif defined(USE_ST7796)
     static const uint16_t gb_colors[4] = {
