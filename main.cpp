@@ -5,11 +5,15 @@
 #include <stdbool.h>
 #include "hardware/pio.h"
 #include "gblcd.pio.h"
+#include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
-//#define USE_ST7789
+#define USE_ST7789
 //#define USE_ILI9341
-#define USE_ST7796
+//#define USE_ST7796
+
+// Uncomment to enable dithering
+#define ENABLE_BW_DITHER
 
 #ifdef USE_ST7789
     #include "displays/st7789/st7789.hpp"
@@ -198,6 +202,15 @@ int main() {
 
     uint16_t data0, data1, vSync;
 
+#ifdef ENABLE_BW_DITHER
+    static const uint16_t gb_colors[4] = {
+        0xFFFF,  // Lightest
+        0x7777,  // Light
+        0x3333,  // Dark
+        0x0000   // Darkest
+    };
+#else
+
     // palette
 #ifdef USE_ST7789
     static const uint16_t gb_colors[4] = {
@@ -220,6 +233,8 @@ int main() {
         0x2384,  // Dark green - #277227ff
         0x2224   // Darkest green - #234623ff
     };
+#endif
+
 #endif
 
     build_maps();
@@ -300,7 +315,27 @@ int main() {
         }
 #endif
 
-        lcd.drawImage(0, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+    // Optional: compile-time enable the two-stage BW dither. Uncomment to enable.
+#ifdef ENABLE_BW_DITHER
+    // Convert the scaled RGB565 buffer to 4 perceptual levels using FS,
+    // then map those levels to 8x8 B/W patterns and overwrite scaledBuf
+    // with black/white RGB565 pixels for display.
+    static uint8_t levels[SCALED_W * SCALED_H]; // stored as 0..3
+    floyd_steinberg_rgb565_to_4levels(scaledBuf, levels, SCALED_W, SCALED_H);
+    // Map levels -> pattern bits and write back as RGB565 black/white
+    const uint16_t BW_BLACK = 0x0000;
+    const uint16_t BW_WHITE = 0xFFFF;
+    for (int yy = 0; yy < SCALED_H; ++yy) {
+        for (int xx = 0; xx < SCALED_W; ++xx) {
+        int idx = yy * SCALED_W + xx;
+        uint8_t lvl = levels[idx];
+        bool bit = mapped_dither_bit(lvl, xx, yy);
+        scaledBuf[idx] = bit ? BW_BLACK : BW_WHITE;
+        }
+    }
+#endif
+
+    lcd.drawImage(0, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
 
         vSyncFallingEdgeDetected = false;
     }
