@@ -7,10 +7,10 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 
 ## 📸 Preview Gallery
 
-| ST7789 (240x240) | ILI9341 (240x320) | ST7796 (320x480) | RP2040-Zero Compact |
-|:-----------------:|:------------------:|:-----------------:|:-------------------:|
-| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
-| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Compact 60% Smaller Build |
+| ST7789 (240x240) | ILI9341 (240x320) | ILI9342 (240x320) | ST7796 (320x480) | RP2040-Zero Compact |
+|:-----------------:|:------------------:|:------------------:|:-----------------:|:-------------------:|
+| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | *(add ili9342 image if available)* | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
+| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Compact 60% Smaller Build |
 
 📁 **More photos and videos in the [preview/](preview/) folder**
 
@@ -26,10 +26,11 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 
 ## 🎮 What It Does
 
+
 This project captures the LCD data from a Game Boy (DMG) in real-time and displays it on modern TFT screens with the following features:
 
 - **Real-Time Capture**: Uses RP2040's PIO (Programmable I/O) for hardware-timed Game Boy LCD signal capture
-- **Multi-Display Support**: ST7789, ILI9341, and ST7796 displays with optimized drivers
+  - **Multi-Display Support**: ST7789, ILI9341, ILI9342, and ST7796 displays with optimized drivers
 - **Intelligent Scaling**: Automatic resolution scaling with display-specific optimizations
 - **DMA Acceleration**: Hardware DMA for fast image transfers and smooth frame rates
 - **Color Mapping**: Authentic Game Boy green color palettes for each display type
@@ -43,17 +44,27 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 - **Position**: Vertically centered
 - **Colors**: Classic Game Boy green tones
 
-### ILI9341 (240x320)  
+### ILI9341 (240x320)
 - **SPI Speed**: 40MHz
 - **Scaling**: 1.5x (160x144 → 240x216)
 - **Position**: Top aligned
 - **Colors**: Optimized green palette
+
+### ILI9342 (240x320) *(New!)*
+- **SPI Speed**: 40MHz
+- **Scaling**: 1.5x (160x144 → 240x216)
+- **Position**: Top aligned
+- **Colors**: Optimized green palette
+- **Notes**: Drop-in replacement for ILI9341 with improved compatibility
 
 ### ST7796 (320x480)
 - **SPI Speed**: 62.5MHz
 - **Scaling**: 2x (160x144 → 320x288)
 - **Position**: Top aligned
 - **Features**: Enhanced performance optimizations
+
+### Dithering Mode for Monochrome Displays
+For monochrome (1-bit) display output, a dithering mode is available. This simulates grayscale using ordered dithering patterns, improving the visual quality on black-and-white screens. Enable this in the display configuration for best results on monochrome hardware.
 
 ## 🔧 Hardware Requirements
 
@@ -136,10 +147,12 @@ make -j4
 │   └── displays/               # Display drivers
 │       ├── st7789/            # ST7789 driver
 │       ├── ili9341/           # ILI9341 driver
+│       ├── ili9342/           # ILI9342 driver (NEW)
 │       └── st7796/            # ST7796 driver
 ├── src/displays/               # Driver implementations
 │   ├── st7789/                # ST7789 source files
 │   ├── ili9341/               # ILI9341 source files
+│   ├── ili9342/               # ILI9342 source files
 │   └── st7796/                # ST7796 source files
 ├── pio/gblcd/                 # PIO programs
 │   ├── gblcd.pio             # Game Boy LCD capture
@@ -276,7 +289,4 @@ This project is open source. See individual files for license information.
 - Hardware tutorials
 - Behind-the-scenes content
 
----
-
-**Made with ❤️ by [@rusaakkmods](https://www.instagram.com/rusaakkmods/)**
 

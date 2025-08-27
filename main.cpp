@@ -19,8 +19,8 @@
 // Choose display type: uncomment one of these lines
 
 //#define USE_ST7789
-//#define USE_ILI9341
-#define USE_ILI9342
+#define USE_ILI9341
+//#define USE_ILI9342
 //#define USE_ST7796
 
 // Uncomment to enable dithering for monochrome display

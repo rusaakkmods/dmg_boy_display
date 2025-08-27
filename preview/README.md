@@ -12,6 +12,11 @@ This folder contains preview images and videos of the DMG Boy Display project in
 ![ILI9341 Display](ili9341.jpg)
 *ILI9341 240x320 display showing Game Boy content with 1.5x scaling*
 
+
+### ILI9342 Display (240x320) *(New!)*
+*(Add ili9342.jpg if available)*
+*ILI9342 240x320 display showing Game Boy content with 1.5x scaling*
+
 ### ST7796 Display (320x480)
 ![ST7796 Display](st7796.jpg)
 *ST7796 320x480 display showing Game Boy content with 2x scaling*
@@ -55,11 +60,18 @@ All images show the same Game Boy LCD capture system with different configuratio
 
 ## 📐 Display Comparisons
 
-| Display | Resolution | Scaling | Position | Performance |
-|---------|------------|---------|----------|-------------|
-| ST7789  | 240x240    | 1.5x    | Centered | 40MHz SPI   |
-| ILI9341 | 240x320    | 1.5x    | Top      | 40MHz SPI   |
-| ST7796  | 320x480    | 2.0x    | Top      | 62.5MHz SPI |
+| Display  | Resolution | Scaling | Position | Performance |
+|----------|------------|---------|----------|-------------|
+| ST7789   | 240x240    | 1.5x    | Centered | 40MHz SPI   |
+| ILI9341  | 240x320    | 1.5x    | Top      | 40MHz SPI   |
+| ILI9342  | 240x320    | 1.5x    | Top      | 40MHz SPI   |
+| ST7796   | 320x480    | 2.0x    | Top      | 62.5MHz SPI |
+
+---
+
+## Dithering Mode for Monochrome Displays
+
+A dithering mode is available for monochrome (1-bit) display output. This simulates grayscale using ordered dithering patterns, improving the visual quality on black-and-white screens. Enable this in the display configuration for best results on monochrome hardware.
 
 ---
 
