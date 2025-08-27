@@ -9,8 +9,8 @@
 #include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
-#define USE_ST7789
-//#define USE_ILI9341
+//#define USE_ST7789
+#define USE_ILI9341
 //#define USE_ILI9342
 //#define USE_ST7796
 
@@ -36,7 +36,7 @@
     #define SCALED_W 240
     #define SCALED_H 216
     #define Y_OFF 12
-    #define H_OFF 0
+    #define X_OFF 0
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
@@ -45,7 +45,7 @@
     #define SCALED_W 240
     #define SCALED_H 216
     #define Y_OFF 0
-    #define H_OFF 0
+    #define X_OFF 0
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
@@ -54,7 +54,7 @@
     #define SCALED_W 240
     #define SCALED_H 216
     #define Y_OFF 12
-    #define H_OFF 40
+    #define X_OFF 40
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ST7796)
     #include "displays/st7796/st7796.hpp"
@@ -63,7 +63,7 @@
     #define SCALED_W 320
     #define SCALED_H 288
     #define Y_OFF 0 
-    #define H_OFF 0
+    #define X_OFF 0
     #define DISPLAY_SCALE 2
 #else
     #error "Please define USE_ST7789, USE_ILI9341, USE_ILI9342, or USE_ST7796"
@@ -194,7 +194,10 @@ int main() {
     // fill screen with black
     lcd.clearScreen(0x0000);
 
-    lcd.drawImage((LCD_W - RMODS_LOGO_WIDTH) / 2, (LCD_H - RMODS_LOGO_HEIGHT) / 2, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
+    //(LCD_W - RMODS_LOGO_WIDTH) / 2;
+    int logo_x = X_OFF + (SCALED_W - RMODS_LOGO_WIDTH) / 2;
+    int logo_y = Y_OFF + (SCALED_H - RMODS_LOGO_HEIGHT) / 2;
+    lcd.drawImage(logo_x, logo_y, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
     sleep_ms(1000);
 
     // PIO setup
@@ -274,7 +277,7 @@ int main() {
         fast_bayer_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
 #endif
 
-        lcd.drawImage(H_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+        lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         vSyncFallingEdgeDetected = false;
     }
     return 0;
