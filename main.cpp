@@ -9,13 +9,27 @@
 #include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
-//#define USE_ST7789
-#define USE_ILI9341
+#define USE_ST7789
+//#define USE_ILI9341
 //#define USE_ILI9342
 //#define USE_ST7796
+// #define USE_SH1107
 
 // Uncomment to enable dithering for monochrome display
 //#define ENABLE_BW_DITHER
+
+// just for fun!!
+// special mods, negative film color inversion 
+// only works on "modified" st7789
+// uncomment to enable
+//#define ENABLE_ST7789_NEGATIVE_FILM
+
+// If using the SH1107 (monochrome) force BW dither on
+#if defined(USE_SH1107)
+#ifndef ENABLE_BW_DITHER
+#define ENABLE_BW_DITHER
+#endif
+#endif
 
 // Pin definitions
 #define SPI_CHANNEL spi1
@@ -31,12 +45,23 @@
 
 #ifdef USE_ST7789
     #include "displays/st7789/st7789.hpp"
-    #define LCD_W 240
-    #define LCD_H 240
+    #ifdef ENABLE_ST7789_NEGATIVE_FILM
+        #define LCD_W 320
+        #define LCD_H 240
+        #define Y_OFF 12
+        #define X_OFF 40
+        #define DISPLAY_ROTATION st7789::ROTATION_270
+        #define FILL_COLOR st7789::WHITE
+    #else
+        #define LCD_W 240
+        #define LCD_H 240
+        #define Y_OFF 12
+        #define X_OFF 0
+        #define DISPLAY_ROTATION st7789::ROTATION_0
+        #define FILL_COLOR st7789::BLACK
+    #endif
     #define SCALED_W 240
     #define SCALED_H 216
-    #define Y_OFF 12
-    #define X_OFF 0
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
@@ -46,6 +71,8 @@
     #define SCALED_H 216
     #define Y_OFF 0
     #define X_OFF 0
+    #define DISPLAY_ROTATION ili9341::ROTATION_0
+    #define FILL_COLOR ili9341::BLACK
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
@@ -55,6 +82,8 @@
     #define SCALED_H 216
     #define Y_OFF 12
     #define X_OFF 40
+    #define DISPLAY_ROTATION ili9342::ROTATION_0
+    #define FILL_COLOR ili9342::BLACK
     #define DISPLAY_SCALE 1.5
 #elif defined(USE_ST7796)
     #include "displays/st7796/st7796.hpp"
@@ -64,7 +93,20 @@
     #define SCALED_H 288
     #define Y_OFF 0 
     #define X_OFF 0
+    #define DISPLAY_ROTATION st7796::ROTATION_180
+    #define FILL_COLOR st7796::BLACK
     #define DISPLAY_SCALE 2
+#elif defined(USE_SH1107)
+    #include "displays/sh1107/sh1107.hpp"
+    #define LCD_W 128
+    #define LCD_H 128
+    #define SCALED_W 128
+    #define SCALED_H 115
+    #define Y_OFF 6
+    #define X_OFF 0
+    #define DISPLAY_ROTATION sh1107::ROTATION_0
+    #define FILL_COLOR sh1107::BLACK
+    #define DISPLAY_SCALE 0.8
 #else
     #error "Please define USE_ST7789, USE_ILI9341, USE_ILI9342, or USE_ST7796"
 #endif
@@ -125,7 +167,7 @@ static inline void build_maps(void) {
         int sx;
     if (DISPLAY_SCALE == 1.5) sx = (x * 2) / 3;
     else if (DISPLAY_SCALE == 2) sx = x / 2;
-    else if (DISPLAY_SCALE == 0.8) sx = (x * 5) / 4; // upscale from 0.8 -> source index = x / 0.8 = x * 1.25 = x * 5/4
+    else if (DISPLAY_SCALE == 0.8) sx = (x * 5) / 4;
     else  sx = x;
 
         if (sx >= DMG_W) sx = DMG_W - 1;
@@ -135,7 +177,7 @@ static inline void build_maps(void) {
         int sy;
     if (DISPLAY_SCALE == 1.5) sy = (y * 2) / 3;
     else if (DISPLAY_SCALE == 2) sy = y / 2;
-    else if (DISPLAY_SCALE == 0.8) sy = (y * 5) / 4; // upscale from 0.8 -> source index = y / 0.8 = y * 1.25
+    else if (DISPLAY_SCALE == 0.8) sy = (y * 5) / 4;
     else  sy = y;
 
         if (sy >= DMG_H) sy = DMG_H - 1;
@@ -152,26 +194,27 @@ int main() {
     st7789::ST7789 lcd;
     st7789::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.rotation = st7789::ROTATION_0;
     config.dma.buffer_size = 480;  // 240 pixels * 2 bytes = 480 bytes per line
 #elif defined(USE_ILI9341)
     ili9341::ILI9341 lcd;
     ili9341::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.rotation = ili9341::ROTATION_0;
     config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
 #elif defined(USE_ILI9342)
     ili9342::ILI9342 lcd;
     ili9342::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.rotation = ili9342::ROTATION_0;
     config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
 #elif defined(USE_ST7796)
     st7796::ST7796 lcd;
     st7796::Config config;
     config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz
-    config.rotation = st7796::ROTATION_180;
     config.dma.buffer_size = 4096;  // 4KB buffer
+#elif defined(USE_SH1107)
+    sh1107::SH1107 lcd;
+    sh1107::Config config;
+    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz typical for SH1107
+    config.dma.enabled = false; // no DMA for monochrome SH1107 implementation
 #endif
 
     // Set common config values
@@ -184,6 +227,7 @@ int main() {
     config.pin_reset = PIN_RESET;
     config.pin_bl = PIN_BL;
     config.dma.enabled = true;
+    config.rotation = DISPLAY_ROTATION;
     
     lcd.begin(config);
 
@@ -193,7 +237,7 @@ int main() {
     // Set static brightness 0 off, 255 brightest
     lcd.setBrightness(255); 
 
-    // fill screen with black
+    // clear screen with black
     lcd.clearScreen(0x0000);
 
     //(LCD_W - RMODS_LOGO_WIDTH) / 2;
@@ -234,7 +278,7 @@ int main() {
 
         if (!firstRun) {
             firstRun = true;
-            lcd.clearScreen(0x0000);
+            lcd.clearScreen(FILL_COLOR);
         }
 
         // ---- Capture 160x144 into screenBuffer ----
