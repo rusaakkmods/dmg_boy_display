@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
-#include "include/logo.h"
+#include "logo.h"
+#include "scaler.hpp"
 #include <stdbool.h>
 #include "hardware/pio.h"
 #include "hardware/spi.h"
 #include "gblcd.pio.h"
-#include "dither.hpp"
 
 // Choose display type: uncomment one of these lines
 #define USE_ST7789
@@ -22,7 +22,7 @@
 // special mods, negative film color inversion 
 // only works on "modified" st7789
 // uncomment to enable
-//#define ENABLE_ST7789_NEGATIVE_FILM
+#define ENABLE_ST7789_NEGATIVE_FILM
 
 // If using the SH1107 (monochrome) force BW dither on
 #if defined(USE_SH1107)
@@ -48,10 +48,11 @@
     #ifdef ENABLE_ST7789_NEGATIVE_FILM
         #define LCD_W 320
         #define LCD_H 240
-        #define Y_OFF 12
-        #define X_OFF 40
+        #define Y_OFF 0
+        #define X_OFF 26
         #define DISPLAY_ROTATION st7789::ROTATION_270
         #define FILL_COLOR st7789::WHITE
+        #define DISPLAY_SCALE 1.67
     #else
         #define LCD_W 240
         #define LCD_H 240
@@ -59,16 +60,12 @@
         #define X_OFF 0
         #define DISPLAY_ROTATION st7789::ROTATION_0
         #define FILL_COLOR st7789::BLACK
+        #define DISPLAY_SCALE 1.5
     #endif
-    #define SCALED_W 240
-    #define SCALED_H 216
-    #define DISPLAY_SCALE 1.5
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
     #define LCD_W 240
     #define LCD_H 320
-    #define SCALED_W 240
-    #define SCALED_H 216
     #define Y_OFF 0
     #define X_OFF 0
     #define DISPLAY_ROTATION ili9341::ROTATION_0
@@ -78,8 +75,6 @@
     #include "displays/ili9342/ili9342.hpp"
     #define LCD_W 320
     #define LCD_H 240
-    #define SCALED_W 240
-    #define SCALED_H 216
     #define Y_OFF 12
     #define X_OFF 40
     #define DISPLAY_ROTATION ili9342::ROTATION_0
@@ -89,8 +84,6 @@
     #include "displays/st7796/st7796.hpp"
     #define LCD_W 320
     #define LCD_H 480
-    #define SCALED_W 320
-    #define SCALED_H 288
     #define Y_OFF 0 
     #define X_OFF 0
     #define DISPLAY_ROTATION st7796::ROTATION_180
@@ -100,8 +93,6 @@
     #include "displays/sh1107/sh1107.hpp"
     #define LCD_W 128
     #define LCD_H 128
-    #define SCALED_W 128
-    #define SCALED_H 115
     #define Y_OFF 6
     #define X_OFF 0
     #define DISPLAY_ROTATION sh1107::ROTATION_0
@@ -110,6 +101,9 @@
 #else
     #error "Please define USE_ST7789, USE_ILI9341, USE_ILI9342, or USE_ST7796"
 #endif
+
+#define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
+#define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
 // BW output constants used by the fast dither path
 static const uint16_t BW_BLACK = 0x0000;
@@ -157,36 +151,6 @@ static const uint16_t BW_WHITE = 0xFFFF;
     #endif
 #endif
 
-static int xmap[SCALED_W];
-static int ymap[SCALED_H];
-static bool maps_built = false;
-static inline void build_maps(void) {
-    if (maps_built) return;
-
-    for (int x = 0; x < SCALED_W; x++) {
-        int sx;
-    if (DISPLAY_SCALE == 1.5) sx = (x * 2) / 3;
-    else if (DISPLAY_SCALE == 2) sx = x / 2;
-    else if (DISPLAY_SCALE == 0.8) sx = (x * 5) / 4;
-    else  sx = x;
-
-        if (sx >= DMG_W) sx = DMG_W - 1;
-        xmap[x] = sx;
-    }
-    for (int y = 0; y < SCALED_H; y++) {
-        int sy;
-    if (DISPLAY_SCALE == 1.5) sy = (y * 2) / 3;
-    else if (DISPLAY_SCALE == 2) sy = y / 2;
-    else if (DISPLAY_SCALE == 0.8) sy = (y * 5) / 4;
-    else  sy = y;
-
-        if (sy >= DMG_H) sy = DMG_H - 1;
-        ymap[y] = sy;
-    }
-    
-    maps_built = true;
-}
-
 int main() {
     stdio_init_all();
     
@@ -230,17 +194,15 @@ int main() {
     config.rotation = DISPLAY_ROTATION;
     
     lcd.begin(config);
-
-    // set lcd rotation
     lcd.setRotation(config.rotation);
 
     // Set static brightness 0 off, 255 brightest
     lcd.setBrightness(255); 
 
-    // clear screen with black
-    lcd.clearScreen(0x0000);
+    // this will invert color! for testing
+    //lcd->invertDisplay(false);
 
-    //(LCD_W - RMODS_LOGO_WIDTH) / 2;
+    lcd.clearScreen(RMODS_LOGO_BACKGROUND);
     int logo_x = X_OFF + (SCALED_W - RMODS_LOGO_WIDTH) / 2;
     int logo_y = Y_OFF + (SCALED_H - RMODS_LOGO_HEIGHT) / 2;
     lcd.drawImage(logo_x, logo_y, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
@@ -262,7 +224,9 @@ int main() {
     static uint16_t scaledBuf[SCALED_W * SCALED_H];
     uint16_t data0, data1, vSync;
 
-    build_maps();
+    static int xmap[SCALED_W];
+    static int ymap[SCALED_H];
+    Scaler::buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
 
     while (true) {
         uint32_t result = pio_sm_get_blocking(pio, state_machine_id);

@@ -7,6 +7,7 @@
 
 #define RMODS_LOGO_WIDTH 145
 #define RMODS_LOGO_HEIGHT 115
+#define RMODS_LOGO_BACKGROUND 0x0000
 
 const uint16_t rMODS_logo_data[16675] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 
