@@ -3,16 +3,17 @@
 #include "pico/stdlib.h"
 #include "logo.h"
 #include "scaler.hpp"
+#include "dither.hpp"
 #include <stdbool.h>
 #include "hardware/pio.h"
 #include "hardware/spi.h"
 #include "gblcd.pio.h"
 
 // Choose display type: uncomment one of these lines
-#define USE_ST7789
-//#define USE_ILI9341
+//#define USE_ST7789
+#define USE_ILI9341
 //#define USE_ILI9342
-//#define USE_ST7796
+#define USE_ST7796
 // #define USE_SH1107
 
 // Uncomment to enable dithering for monochrome display
@@ -22,7 +23,7 @@
 // special mods, negative film color inversion 
 // only works on "modified" st7789
 // uncomment to enable
-#define ENABLE_ST7789_NEGATIVE_FILM
+//#define ENABLE_ST7789_NEGATIVE_FILM
 
 // If using the SH1107 (monochrome) force BW dither on
 #if defined(USE_SH1107)
@@ -200,7 +201,7 @@ int main() {
     lcd.setBrightness(255); 
 
     // this will invert color! for testing
-    //lcd->invertDisplay(false);
+    //lcd.invertDisplay(false);
 
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
     int logo_x = X_OFF + (SCALED_W - RMODS_LOGO_WIDTH) / 2;
@@ -226,7 +227,7 @@ int main() {
 
     static int xmap[SCALED_W];
     static int ymap[SCALED_H];
-    Scaler::buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
+    buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
 
     while (true) {
         uint32_t result = pio_sm_get_blocking(pio, state_machine_id);

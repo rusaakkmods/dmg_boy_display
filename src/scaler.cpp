@@ -1,6 +1,6 @@
 #include "scaler.hpp"
 
-void Scaler::buildScaleMaps(int* xmap, int* ymap, 
+void buildScaleMaps(int* xmap, int* ymap, 
                            int source_w, int source_h,
                            int scaled_w, int scaled_h,
                            float display_scale) {
