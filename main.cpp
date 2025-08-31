@@ -158,25 +158,29 @@ int main() {
     st7789::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
     config.dma.buffer_size = 480;  // 240 pixels * 2 bytes = 480 bytes per line
+    config.dma.enabled = true;
 #elif defined(USE_ILI9341)
     ili9341::ILI9341 lcd;
     ili9341::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
     config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
+    config.dma.enabled = true;
 #elif defined(USE_ILI9342)
     ili9342::ILI9342 lcd;
     ili9342::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
     config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
+    config.dma.enabled = true;
 #elif defined(USE_ST7796)
     st7796::ST7796 lcd;
     st7796::Config config;
     config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz
     config.dma.buffer_size = 4096;  // 4KB buffer
+    config.dma.enabled = true;
 #elif defined(USE_SH1107)
     sh1107::SH1107 lcd;
     sh1107::Config config;
-    config.spi_speed_hz = 8 * 1000 * 1000; // 16MHz - increased from 8MHz for better performance
+    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz typical for SH1107
     config.dma.enabled = false; // no DMA for monochrome SH1107 implementation
 #endif
 
@@ -189,7 +193,6 @@ int main() {
     config.pin_dc = PIN_DC;
     config.pin_reset = PIN_RESET;
     config.pin_bl = PIN_BL;
-    config.dma.enabled = true;
     config.rotation = DISPLAY_ROTATION;
     
     lcd.begin(config);
