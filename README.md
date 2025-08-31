@@ -72,7 +72,7 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 - **Features**: Enhanced performance optimizations
 
 ### SH1107 OLED (128x128) *(New!)*
-- **SPI Speed**: 40MHz
+- **SPI Speed**: 8MHz
 - **Resolution**: 128x128 monochrome OLED
 - **Scaling**: 0.8x (160x144 → 128x115)
 - **Position**: Centered
