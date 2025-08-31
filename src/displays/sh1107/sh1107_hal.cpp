@@ -8,7 +8,8 @@ HAL::HAL() : _initialized(false) {}
 HAL::~HAL() {}
 
 static void spi_tx_blocking(spi_inst_t* spi, const uint8_t* buf, size_t len) {
-    for (size_t i = 0; i < len; ++i) spi_write_blocking(spi, &buf[i], 1);
+    // Optimized: send entire buffer at once instead of byte-by-byte
+    spi_write_blocking(spi, buf, len);
 }
 
 void HAL::spi_init_hw() {

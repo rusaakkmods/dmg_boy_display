@@ -195,8 +195,9 @@ int main() {
 #elif defined(USE_SH1107)
     sh1107::SH1107 lcd;
     sh1107::Config config;
-    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz typical for SH1107
-    config.dma.enabled = false; // no DMA for monochrome SH1107 implementation
+    config.spi_speed_hz = 16 * 1000 * 1000; // 16MHz for reliable operation
+    config.dma.enabled = true; // Enable DMA for faster data transfer
+    config.dma.buffer_size = 256; // Buffer size for DMA transfers
 #endif
 
     // Set common config values

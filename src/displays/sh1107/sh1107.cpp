@@ -40,6 +40,9 @@ void SH1107::drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint16_
     int start_page = draw_y / 8;
     int end_page = (draw_y + draw_h - 1) / 8;
     
+    // Static buffer to avoid memory allocations in time-critical path
+    static uint8_t pageBuf[128]; // SH1107 max width
+    
     // Build and send pages
     for (int page = start_page; page <= end_page; ++page) {
         // Set page address
@@ -48,9 +51,8 @@ void SH1107::drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint16_
         _hal.writeCommand(0x00 | (draw_x & 0x0F));        // Set lower column address
         _hal.writeCommand(0x10 | ((draw_x >> 4) & 0x0F)); // Set higher column address
 
-        // Prepare buffer for this page section
-        std::vector<uint8_t> pageBuf(draw_w);
-        memset(pageBuf.data(), 0, pageBuf.size());
+        // Clear buffer
+        memset(pageBuf, 0, draw_w);
 
         for (int col = 0; col < draw_w; ++col) {
             uint8_t byte = 0;
@@ -67,21 +69,21 @@ void SH1107::drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint16_
                 if (srcIndex >= w * h || srcIndex < 0) continue; // Additional safety check
                 
                 uint16_t pix = data[srcIndex];
-                // convert RGB565 to luminance
-                uint8_t r = (pix >> 11) & 0x1F;
-                uint8_t g = (pix >> 5) & 0x3F;
-                uint8_t b = pix & 0x1F;
-                uint16_t rr = (r * 255) / 31;
-                uint16_t gg = (g * 255) / 63;
-                uint16_t bb = (b * 255) / 31;
-                uint16_t lum = (uint16_t)((rr * 299 + gg * 587 + bb * 114) / 1000);
+                // Optimized RGB565 to luminance conversion
+                // Extract and convert in one go with bit shifting
+                uint8_t r = (pix >> 8) & 0xF8;  // Red: take top 5 bits, shift to 8-bit range
+                uint8_t g = (pix >> 3) & 0xFC;  // Green: take top 6 bits, shift to 8-bit range  
+                uint8_t b = (pix << 3) & 0xF8;  // Blue: take top 5 bits, shift to 8-bit range
+                
+                // Fast luminance using integer approximation: Y = (R + 2*G + B) / 4
+                uint16_t lum = (r + (g << 1) + b) >> 2;
                 if (lum > 128) byte |= (1 << bit);
             }
             pageBuf[col] = byte;
         }
 
         // Send page buffer
-        _hal.writeDataBuffer(pageBuf.data(), pageBuf.size());
+        _hal.writeDataBuffer(pageBuf, draw_w);
     }
 }
 
@@ -92,13 +94,16 @@ void SH1107::clearScreen(uint16_t color) {
     const int height = _hal.getConfig().height;
     const int pages = (height + 7) / 8;
     uint8_t fill = (color == 0) ? 0x00 : 0xFF;
-    std::vector<uint8_t> pageBuf(width, fill);
+    
+    // Static buffer to avoid memory allocations
+    static uint8_t pageBuf[128]; // SH1107 max width
+    memset(pageBuf, fill, width);
 
     for (int page = 0; page < pages; ++page) {
         _hal.writeCommand(0xB0 | page);
         _hal.writeCommand(0x00 | (0 & 0x0F));        // Set lower column address (0)
         _hal.writeCommand(0x10 | ((0 >> 4) & 0x0F)); // Set higher column address (0)
-        _hal.writeDataBuffer(pageBuf.data(), pageBuf.size());
+        _hal.writeDataBuffer(pageBuf, width);
     }
 }
 
