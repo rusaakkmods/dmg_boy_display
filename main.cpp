@@ -116,6 +116,8 @@
 static const uint16_t BW_BLACK = 0x0000;
 static const uint16_t BW_WHITE = 0xFFFF;
 
+
+// Visit this website providing tools to preview color https://rgbcolorpicker.com/565
 // Palettes setup
 #ifdef ENABLE_BW_DITHER
     #ifdef DITHER_BEST
@@ -143,10 +145,10 @@ static const uint16_t BW_WHITE = 0xFFFF;
         };
     #elif defined(USE_ILI9341)
         static const uint16_t gb_colors[4] = {
-            0x4E09,  // Lightest green - #4bc24bff (background)
-            0x3526,  // Light green - #37a537ff
-            0x2384,  // Dark green - #277227ff
-            0x2224   // Darkest green - #234623ff
+            0x9772,  // Bright saturated green - much more vibrant background
+            0x4c49,  // Rich medium green - deeper saturation
+            0x5e0b,  // Dark forest green - good contrast
+            0x1082   // Very dark green - strong contrast
         };
     #elif defined(USE_ILI9342)
         static const uint16_t gb_colors[4] = {
