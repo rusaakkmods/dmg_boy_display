@@ -195,7 +195,7 @@ int main() {
 #elif defined(USE_SH1107)
     sh1107::SH1107 lcd;
     sh1107::Config config;
-    config.spi_speed_hz = 16 * 1000 * 1000; // 16MHz for reliable operation
+    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz SPI speed
     config.dma.enabled = true; // Enable DMA for faster data transfer
     config.dma.buffer_size = 256; // Buffer size for DMA transfers
 #endif
@@ -214,8 +214,12 @@ int main() {
     lcd.begin(config);
     lcd.setRotation(config.rotation);
 
-    // Set static brightness 0 off, 255 brightest
-    lcd.setBrightness(255); 
+    
+#if defined(USE_SH1107)
+    lcd.setBrightness(64); // Max stable brightness on 3.3V power - higher values cause vertical lines
+#elif defined(USE_ILI9341)
+    lcd.setBrightness(255);
+#endif
 
     // this will invert color! for testing
     //lcd.invertDisplay(false);

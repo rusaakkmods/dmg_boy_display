@@ -43,9 +43,13 @@ struct Config {
 
     DmaConfig dma;
 
+    // Power supply adaptive settings
+    bool low_power_mode;  // Reduces contrast and clock speed for unstable power
+    uint8_t initial_contrast; // Starting contrast value
+
     Config() :
         spi_inst(spi1),
-        spi_speed_hz(8 * 1000 * 1000), // default 8MHz
+        spi_speed_hz(4 * 1000 * 1000), // default 4MHz for 3.3V stability
         pin_din(11),
         pin_sck(10),
         pin_cs(9),
@@ -55,7 +59,9 @@ struct Config {
         width(128),
         height(128),
         rotation(ROTATION_0),
-        dma() {}
+        dma(),
+        low_power_mode(true), // Enable low power by default for 3.3V
+        initial_contrast(0x20) {} // Very low default contrast for 3.3V
 };
 
 } // namespace sh1107

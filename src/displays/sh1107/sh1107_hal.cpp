@@ -27,22 +27,41 @@ bool HAL::init(const Config& config) {
     spi_init_hw();
     reset();
 
+    // Add delay for power supply stabilization
+    sleep_ms(50);
+
     // Minimal init sequence based on SH1107 datasheet v2.1
     send_command(0xAE); // Display off
+    sleep_ms(10); // Allow command processing
+    
     send_command(0xA8); send_command(0x7F); // Set multiplex ratio 127
     send_command(0xD3); send_command(0x00); // Display offset
     send_command(0x40); // Set display start line to 0
     // Note: Segment remap and COM scan direction will be set by setRotation()
     send_command(0xDA); send_command(0x12); // COM pins hardware config
-    send_command(0x81); send_command(0x7F); // Contrast
+    
+    // Lower initial contrast for power supply stability
+    send_command(0x81); send_command(_config.initial_contrast); // Use configurable contrast
+    
     send_command(0xA4); // Display RAM on
     send_command(0xA6); // Normal display
+    
+    // Additional power supply related settings
+    if (_config.low_power_mode) {
+        send_command(0xD5); send_command(0x50); // Even lower clock divide ratio for 3.3V power saving
+        send_command(0xDB); send_command(0x15); // Much lower VCOM deselect level for 3.3V
+        send_command(0xD9); send_command(0x22); // Set pre-charge period (lower power)
+    } else {
+        send_command(0xD5); send_command(0x80); // Set display clock divide ratio/oscillator frequency
+        send_command(0xDB); send_command(0x35); // Set VCOM deselect level (lower voltage)
+    }
     
     _initialized = true;
     
     // Apply the configured rotation
     setRotation(_config.rotation);
     
+    sleep_ms(10); // Allow settings to stabilize
     send_command(0xAF); // Display ON
 
     return true;
@@ -57,16 +76,22 @@ void HAL::reset() {
 
 void HAL::send_command(uint8_t cmd) {
     gpio_put(_config.pin_cs, 0);
+    sleep_us(2); // Longer delay for 3.3V signal stability
     gpio_put(_config.pin_dc, 0); // command
     spi_tx_blocking(_config.spi_inst, &cmd, 1);
+    sleep_us(2); // Longer delay before CS release
     gpio_put(_config.pin_cs, 1);
+    sleep_us(5); // Longer inter-command delay for 3.3V power supply stability
 }
 
 void HAL::send_data(const uint8_t* data, size_t len) {
     gpio_put(_config.pin_cs, 0);
+    sleep_us(2); // Longer delay for 3.3V signal stability
     gpio_put(_config.pin_dc, 1); // data
     spi_tx_blocking(_config.spi_inst, data, len);
+    sleep_us(2); // Longer delay before CS release
     gpio_put(_config.pin_cs, 1);
+    sleep_us(1); // Small delay between data packets
 }
 
 void HAL::setContrast(uint8_t v) {
