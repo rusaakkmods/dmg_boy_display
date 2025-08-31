@@ -50,6 +50,9 @@ add_executable(dmg_boy_display
     src/displays/st7796/st7796.cpp
     src/displays/st7796/st7796_hal.cpp
     src/displays/st7796/st7796_gfx.cpp
+    src/displays/sh1107/sh1107.cpp
+    src/displays/sh1107/sh1107_hal.cpp
+    src/displays/sh1107/sh1107_gfx.cpp
     src/dither.cpp
     src/scaler.cpp
 )

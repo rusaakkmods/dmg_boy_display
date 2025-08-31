@@ -179,3 +179,5 @@ Icon?
 # Uncomment if you have these:
 # config.h.in
 # version.h.in
+
+.fake

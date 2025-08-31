@@ -11,10 +11,10 @@
 
 // Choose display type: uncomment one of these lines
 //#define USE_ST7789
-#define USE_ILI9341
+//#define USE_ILI9341
 //#define USE_ILI9342
 //#define USE_ST7796
-// #define USE_SH1107
+#define USE_SH1107
 
 // Uncomment to enable dithering for monochrome display
 //#define ENABLE_BW_DITHER
@@ -96,7 +96,7 @@
     #define LCD_H 128
     #define Y_OFF 6
     #define X_OFF 0
-    #define DISPLAY_ROTATION sh1107::ROTATION_0
+    #define DISPLAY_ROTATION sh1107::ROTATION_180
     #define FILL_COLOR sh1107::BLACK
     #define DISPLAY_SCALE 0.8
 #else
@@ -112,7 +112,6 @@ static const uint16_t BW_WHITE = 0xFFFF;
 
 // Palettes setup
 #ifdef ENABLE_BW_DITHER
-    static const uint16_t* logo = (uint16_t*)rMODS_logo_bw_data;
     static const uint16_t gb_colors[4] = {
         0xFFFF,  // Lightest
         0x8888,  // Light
@@ -120,7 +119,6 @@ static const uint16_t BW_WHITE = 0xFFFF;
         0x0000   // Darkest
     };
 #else
-    static const uint16_t* logo = (uint16_t*)rMODS_logo_data;
     #ifdef USE_ST7789
         static const uint16_t gb_colors[4] = {
             0x9772,  // Bright saturated green - much more vibrant background
@@ -178,7 +176,7 @@ int main() {
 #elif defined(USE_SH1107)
     sh1107::SH1107 lcd;
     sh1107::Config config;
-    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz typical for SH1107
+    config.spi_speed_hz = 8 * 1000 * 1000; // 16MHz - increased from 8MHz for better performance
     config.dma.enabled = false; // no DMA for monochrome SH1107 implementation
 #endif
 
@@ -204,9 +202,18 @@ int main() {
     //lcd.invertDisplay(false);
 
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
-    int logo_x = X_OFF + (SCALED_W - RMODS_LOGO_WIDTH) / 2;
-    int logo_y = Y_OFF + (SCALED_H - RMODS_LOGO_HEIGHT) / 2;
-    lcd.drawImage(logo_x, logo_y, RMODS_LOGO_WIDTH, RMODS_LOGO_HEIGHT, logo);
+    #ifdef ENABLE_BW_DITHER
+        static const uint16_t* logo = (uint16_t*)rMODS_logo_bw_smaller;
+        int logo_width = SMALLER_LOGO_WIDTH;
+        int logo_height = SMALLER_LOGO_HEIGHT;
+    #else
+        static const uint16_t* logo = (uint16_t*)rMODS_logo_data;
+        int logo_width = RMODS_LOGO_WIDTH;
+        int logo_height = RMODS_LOGO_HEIGHT;
+    #endif
+    int logo_x = (int)(X_OFF + (SCALED_W - logo_width) / 2);
+    int logo_y = (int)(Y_OFF + (SCALED_H - logo_height) / 2);
+    lcd.drawImage(logo_x, logo_y, logo_width, logo_height, logo);
     sleep_ms(1000);
 
     // PIO setup

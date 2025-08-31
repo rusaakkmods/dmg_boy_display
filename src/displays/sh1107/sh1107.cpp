@@ -1,6 +1,6 @@
-#include "include/displays/sh1107/sh1107.hpp"
+#include "displays/sh1107/sh1107.hpp"
 #include "pico/stdlib.h"
-#include "include/displays/sh1107/sh1107_hal.hpp"
+#include "displays/sh1107/sh1107_hal.hpp"
 #include <vector>
 #include <cstring>
 
@@ -21,34 +21,51 @@ void SH1107::setRotation(Rotation rotation) { _hal.setRotation(rotation); }
 // Helper: send a full frame buffer (w x h RGB565) converting to monochrome pages
 void SH1107::drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint16_t* data) {
     if (!_initialized) return;
-    // Clamp to display
-    if (x < 0 || y < 0 || x + w > (int)_hal.getConfig().width || y + h > (int)_hal.getConfig().height) {
-        // For simplicity, only support full-fit images
+    
+    const int display_width = _hal.getConfig().width;
+    const int display_height = _hal.getConfig().height;
+    
+    // Clamp coordinates to display bounds
+    if (x >= display_width || y >= display_height || x + w <= 0 || y + h <= 0) {
+        return; // Completely outside display
     }
-
-    const int width = _hal.getConfig().width;
-    const int height = _hal.getConfig().height;
-    const int pages = (height + 7) / 8;
-
-    // Build and send pages for the whole screen or the region
-    for (int page = 0; page < pages; ++page) {
+    
+    // Calculate actual drawing bounds
+    int draw_x = (x < 0) ? 0 : x;
+    int draw_y = (y < 0) ? 0 : y;
+    int draw_w = ((x + w) > display_width) ? (display_width - draw_x) : (w - (draw_x - x));
+    int draw_h = ((y + h) > display_height) ? (display_height - draw_y) : (h - (draw_y - y));
+    
+    // Calculate which pages we need to update
+    int start_page = draw_y / 8;
+    int end_page = (draw_y + draw_h - 1) / 8;
+    
+    // Build and send pages
+    for (int page = start_page; page <= end_page; ++page) {
         // Set page address
         _hal.writeCommand(0xB0 | page);
-        // Column address: SH1107 often uses 0x00 and 0x10 for low/high
-        _hal.writeCommand(0x00); // col lower
-        _hal.writeCommand(0x10); // col higher
+        // Set column address to start of drawing area
+        _hal.writeCommand(0x00 | (draw_x & 0x0F));        // Set lower column address
+        _hal.writeCommand(0x10 | ((draw_x >> 4) & 0x0F)); // Set higher column address
 
-        // Prepare buffer for this page
-        std::vector<uint8_t> pageBuf(width);
+        // Prepare buffer for this page section
+        std::vector<uint8_t> pageBuf(draw_w);
         memset(pageBuf.data(), 0, pageBuf.size());
 
-        for (int col = 0; col < width; ++col) {
+        for (int col = 0; col < draw_w; ++col) {
             uint8_t byte = 0;
             for (int bit = 0; bit < 8; ++bit) {
-                int yy = page * 8 + bit;
-                if (yy >= height) continue;
+                int screen_y = page * 8 + bit;
+                int src_y = screen_y - y;
+                int src_x = (draw_x + col) - x;
+                
+                // Skip if outside source image bounds
+                if (src_x < 0 || src_x >= w || src_y < 0 || src_y >= h) continue;
+                
                 // pick pixel from input data
-                int srcIndex = yy * w + col; // assumes image width == display width
+                int srcIndex = src_y * w + src_x;
+                if (srcIndex >= w * h || srcIndex < 0) continue; // Additional safety check
+                
                 uint16_t pix = data[srcIndex];
                 // convert RGB565 to luminance
                 uint8_t r = (pix >> 11) & 0x1F;
@@ -79,8 +96,13 @@ void SH1107::clearScreen(uint16_t color) {
 
     for (int page = 0; page < pages; ++page) {
         _hal.writeCommand(0xB0 | page);
-        _hal.writeCommand(0x00);
-        _hal.writeCommand(0x10);
+        _hal.writeCommand(0x00 | (0 & 0x0F));        // Set lower column address (0)
+        _hal.writeCommand(0x10 | ((0 >> 4) & 0x0F)); // Set higher column address (0)
         _hal.writeDataBuffer(pageBuf.data(), pageBuf.size());
     }
+}
+
+void SH1107::invertDisplay(bool invert) {
+    if (!_initialized) return;
+    _hal.writeCommand(invert ? 0xA7 : 0xA6); // 0xA7 = inverted, 0xA6 = normal
 }

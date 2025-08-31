@@ -1,4 +1,4 @@
-#include "include/displays/sh1107/sh1107_hal.hpp"
+#include "displays/sh1107/sh1107_hal.hpp"
 #include "pico/stdlib.h"
 #include <string.h>
 
@@ -31,15 +31,19 @@ bool HAL::init(const Config& config) {
     send_command(0xA8); send_command(0x7F); // Set multiplex ratio 127
     send_command(0xD3); send_command(0x00); // Display offset
     send_command(0x40); // Set display start line to 0
-    send_command(0xA1); // Segment remap
-    send_command(0xC8); // COM scan direction
+    // Note: Segment remap and COM scan direction will be set by setRotation()
     send_command(0xDA); send_command(0x12); // COM pins hardware config
     send_command(0x81); send_command(0x7F); // Contrast
     send_command(0xA4); // Display RAM on
     send_command(0xA6); // Normal display
+    
+    _initialized = true;
+    
+    // Apply the configured rotation
+    setRotation(_config.rotation);
+    
     send_command(0xAF); // Display ON
 
-    _initialized = true;
     return true;
 }
 
@@ -70,8 +74,33 @@ void HAL::setContrast(uint8_t v) {
 }
 
 void HAL::setRotation(Rotation r) {
-    // SH1107 rotation is device dependent; keep stub for API compatibility
     _config.rotation = r;
+    
+    if (!_initialized) return;
+    
+    // SH1107 rotation using segment remap and COM scan direction
+    switch (r) {
+        case ROTATION_0:
+            // Normal orientation
+            send_command(0xA1); // Segment remap (column 127 mapped to SEG0)
+            send_command(0xC8); // COM scan direction (remapped mode, scan from COM[N-1] to COM0)
+            break;
+        case ROTATION_90:
+            // 90 degrees - for OLED this might not be perfectly supported, fallback to 180
+            send_command(0xA0); // Segment remap (column 0 mapped to SEG0)
+            send_command(0xC8); // COM scan direction (remapped mode)
+            break;
+        case ROTATION_180:
+            // 180 degrees rotation
+            send_command(0xA0); // Segment remap (column 0 mapped to SEG0)
+            send_command(0xC0); // COM scan direction (normal mode, scan from COM0 to COM[N-1])
+            break;
+        case ROTATION_270:
+            // 270 degrees - for OLED this might not be perfectly supported, fallback to 0
+            send_command(0xA1); // Segment remap (column 127 mapped to SEG0)
+            send_command(0xC0); // COM scan direction (normal mode)
+            break;
+    }
 }
 
 void HAL::writeCommand(uint8_t cmd) { send_command(cmd); }

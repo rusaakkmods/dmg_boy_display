@@ -1,5 +1,5 @@
-#include "include/displays/sh1107/sh1107_gfx.hpp"
-#include "include/displays/sh1107/sh1107_hal.hpp"
+#include "displays/sh1107/sh1107_gfx.hpp"
+#include "displays/sh1107/sh1107_hal.hpp"
 #include "pico/stdlib.h"
 #include <vector>
 #include <cstring>

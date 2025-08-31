@@ -18,9 +18,10 @@ public:
 
     bool begin(const Config& config = Config());
     void setRotation(Rotation rotation);
-    void clearScreen(uint16_t color = 0x0000) { _gfx.clearScreen(_hal.getConfig().width, _hal.getConfig().height, color); }
+    void clearScreen(uint16_t color = 0x0000);
     void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint16_t* data);
     void setBrightness(uint8_t v) { _hal.setContrast(v); }
+    void invertDisplay(bool invert);
 };
 
 } // namespace sh1107
