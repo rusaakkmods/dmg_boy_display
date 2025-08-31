@@ -9,3 +9,7 @@
 // - bw_white / bw_black: output RGB565 values to write for white/black
 void fast_bayer_dither(uint16_t* buf, int w, int h, const uint16_t palette[4], uint16_t bw_white, uint16_t bw_black);
 
+// High quality Floyd-Steinberg error diffusion dithering
+// Better quality than Bayer but slightly more computational cost
+void floyd_steinberg_dither(uint16_t* buf, int w, int h, const uint16_t palette[4], uint16_t bw_white, uint16_t bw_black);
+

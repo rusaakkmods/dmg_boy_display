@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "logo.h"
 #include "scaler.hpp"
@@ -18,6 +19,11 @@
 
 // Uncomment to enable dithering for monochrome display
 //#define ENABLE_BW_DITHER
+
+// Dithering quality options (choose one if ENABLE_BW_DITHER is defined):
+// DITHER_FAST - Original Bayer dithering (fastest)
+// DITHER_BEST - Floyd-Steinberg error diffusion (best quality, higher performance cost)
+#define DITHER_BEST
 
 // just for fun!!
 // special mods, negative film color inversion 
@@ -112,12 +118,21 @@ static const uint16_t BW_WHITE = 0xFFFF;
 
 // Palettes setup
 #ifdef ENABLE_BW_DITHER
-    static const uint16_t gb_colors[4] = {
-        0xFFFF,  // Lightest
-        0x8888,  // Light
-        0x4444,  // Dark
-        0x0000   // Darkest
-    };
+    #ifdef DITHER_BEST
+        static const uint16_t gb_colors[4] = {
+            0xFFFF,  // Lightest - Pure white
+            0xAAAA,  // Light - 75% gray (more gradual transition)
+            0x4444,  // Dark - 50% gray (better mid-tone)
+            0x0000   // Darkest - Pure black
+        };
+    #else
+        static const uint16_t gb_colors[4] = {
+            0xFFFF,  // Lightest - Pure white
+            0x9999,  // Light - 75% gray (more gradual transition)
+            0x5555,  // Dark - 50% gray (better mid-tone)
+            0x0000   // Darkest - Pure black
+        };
+    #endif
 #else
     #ifdef USE_ST7789
         static const uint16_t gb_colors[4] = {
@@ -269,9 +284,7 @@ int main() {
 
         if (DISPLAY_SCALE == 1) {
             //no-scaling
-            for (int i = 0; i < DMG_W * DMG_H; i++) {
-                scaledBuf[i] = screenBuffer[i];
-            }
+            memcpy(scaledBuf, screenBuffer, DMG_W * DMG_H * sizeof(uint16_t));
         }
         else {
             for (int dy = 0; dy < SCALED_H; dy++) {
@@ -295,7 +308,11 @@ int main() {
         }
         
 #ifdef ENABLE_BW_DITHER
+    #if defined(DITHER_BEST)
+        floyd_steinberg_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+    #else
         fast_bayer_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+    #endif
 #endif
 
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
