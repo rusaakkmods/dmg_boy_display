@@ -21,6 +21,10 @@ This folder contains preview images and videos of the DMG Boy Display project in
 ![ST7796 Display](st7796.jpg)
 *ST7796 320x480 display showing Game Boy content with 2x scaling*
 
+### SH1107 OLED Display (128x128) *(New!)*
+![SH1107 OLED](sh1107_BW_Floyd_Dither.jpg)
+*SH1107 128x128 monochrome OLED display with Floyd-Steinberg dithering*
+
 ### RP2040-Zero Compact Build
 ![RP2040-Zero Build](rp2040-Zero.jpg)
 *Compact build using Waveshare RP2040-Zero for minimal footprint*
@@ -28,6 +32,7 @@ This folder contains preview images and videos of the DMG Boy Display project in
 ## 🎥 Video Demo
 - `preview.mp4` - Video demonstration of the system in action
 - `rp2040-Zero_preview.mp4` - RP2040-Zero compact build demonstration
+- `sh1107_Monochroe_OLED.mp4` - SH1107 OLED display with real-time dithering *(New!)*
 
 ## 📱 Follow for More Projects
 
@@ -60,15 +65,31 @@ All images show the same Game Boy LCD capture system with different configuratio
 
 ## 📐 Display Comparisons
 
-| Display  | Resolution | Scaling | Position | Performance |
-|----------|------------|---------|----------|-------------|
-| ST7789   | 240x240    | 1.5x    | Centered | 40MHz SPI   |
-| ILI9341  | 240x320    | 1.5x    | Top      | 40MHz SPI   |
-| ILI9342  | 240x320    | 1.5x    | Top      | 40MHz SPI   |
-| ST7796   | 320x480    | 2.0x    | Top      | 62.5MHz SPI |
+| Display  | Resolution | Scaling | Position | Performance | Type |
+|----------|------------|---------|----------|-------------|------|
+| ST7789   | 240x240    | 1.5x    | Centered | 40MHz SPI   | TFT Color |
+| ILI9341  | 240x320    | 1.5x    | Top      | 40MHz SPI   | TFT Color |
+| ILI9342  | 240x320    | 1.5x    | Top      | 40MHz SPI   | TFT Color |
+| ST7796   | 320x480    | 2.0x    | Top      | 62.5MHz SPI | TFT Color |
+| SH1107   | 128x128    | 0.8x    | Centered | 40MHz SPI   | OLED Mono |
+
+## 🎨 Dithering Algorithms *(New!)*
+
+The SH1107 OLED display showcases two advanced dithering algorithms for black & white conversion:
+
+### Floyd-Steinberg Dithering *(Featured in Preview)*
+- **High Quality**: Superior visual results with error diffusion
+- **Better Detail**: Preserves fine details and gradients
+- **Shown in Images**: The preview images demonstrate Floyd-Steinberg quality
+- **Best for**: High-quality static conversion and detailed images
+
+### Bayer Ordered Dithering *(Alternative)*
+- **High Performance**: Minimal CPU overhead for real-time use
+- **Consistent Pattern**: Stable, repeatable results
+- **Real-time Friendly**: Optimized for continuous Game Boy capture
+- **Best for**: Real-time applications where speed is critical
 
 ---
-
 
 ## Black & White (Monochrome) Feature for OLED/Monochrome Displays
 

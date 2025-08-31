@@ -9,10 +9,15 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 ## 📸 Preview Gallery
 
 
-| ST7789 (240x240) | ILI9341 (240x320) | ILI9342 (240x320) | ST7796 (320x480) | RP2040-Zero Compact |
-|:-----------------:|:------------------:|:------------------:|:-----------------:|:-------------------:|
-| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ILI9342](preview/ili9342.jpg) | ![ST7796](preview/st7796.jpg) | ![RP2040-Zero](preview/rp2040-Zero.jpg) |
-| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Compact 60% Smaller Build |
+| ST7789 (240x240) | ILI9341 (240x320) | ILI9342 (240x320) | ST7796 (320x480) | SH1107 OLED (128x128) |
+|:-----------------:|:------------------:|:------------------:|:-----------------:|:--------------------:|
+| ![ST7789](preview/st7789_cs.jpg) | ![ILI9341](preview/ili9341.jpg) | ![ILI9342](preview/ili9342.jpg) | ![ST7796](preview/st7796.jpg) | ![SH1107](preview/sh1107_BW_Floyd_Dither.jpg) |
+| 1.5x Scaling, Centered | 1.5x Scaling, Top Aligned | 1.5x Scaling, Top Aligned | 2x Scaling, Top Aligned | Floyd-Steinberg Dither, B&W |
+
+| RP2040-Zero Compact | SH1107 OLED Video Demo |
+|:-------------------:|:---------------------:|
+| ![RP2040-Zero](preview/rp2040-Zero.jpg) | [![SH1107 Video](preview/sh1107_BW_Floyd_Dither.jpg)](preview/sh1107_Monochroe_OLED.mp4) |
+| Compact 60% Smaller Build | Monochrome OLED in Action |
 
 📁 **More photos and videos, including new preview images, are available in the [preview/](preview/) folder**
 
@@ -32,8 +37,9 @@ A high-performance Game Boy LCD capture and display system for the Raspberry Pi 
 This project captures the LCD data from a Game Boy (DMG) in real-time and displays it on modern TFT screens with the following features:
 
 - **Real-Time Capture**: Uses RP2040's PIO (Programmable I/O) for hardware-timed Game Boy LCD signal capture
-  - **Multi-Display Support**: ST7789, ILI9341, ILI9342, and ST7796 displays with optimized drivers
+- **Multi-Display Support**: ST7789, ILI9341, ILI9342, ST7796, and SH1107 OLED displays with optimized drivers
 - **Intelligent Scaling**: Automatic resolution scaling with display-specific optimizations
+- **Advanced Dithering**: Floyd-Steinberg and Bayer dithering algorithms for monochrome displays
 - **DMA Acceleration**: Hardware DMA for fast image transfers and smooth frame rates
 - **Color Mapping**: Authentic Game Boy green color palettes for each display type
 - **Zero Lag**: Hardware-level capture with minimal latency
@@ -65,6 +71,29 @@ This project captures the LCD data from a Game Boy (DMG) in real-time and displa
 - **Position**: Top aligned
 - **Features**: Enhanced performance optimizations
 
+### SH1107 OLED (128x128) *(New!)*
+- **SPI Speed**: 40MHz
+- **Resolution**: 128x128 monochrome OLED
+- **Scaling**: 0.8x (160x144 → 128x115)
+- **Position**: Centered
+- **Dithering**: Floyd-Steinberg or Bayer dithering for black & white conversion
+- **Features**: Ultra-low power consumption, high contrast ratio
+
+## 🎨 Advanced Dithering Algorithms
+
+### Floyd-Steinberg Dithering *(New!)*
+High-quality error diffusion dithering algorithm that provides superior image quality for monochrome displays:
+- **Better Quality**: Superior visual results compared to ordered dithering
+- **Error Diffusion**: Distributes quantization errors to neighboring pixels
+- **Ideal for**: Static images and high-quality monochrome conversion
+- **Usage**: Automatically enabled for SH1107 OLED displays
+
+### Bayer Ordered Dithering
+Fast, efficient ordered dithering using an 8x8 Bayer matrix:
+- **High Performance**: Minimal CPU overhead, perfect for real-time applications
+- **Consistent Pattern**: Stable, repeatable dithering pattern
+- **Real-time Friendly**: Optimized for continuous Game Boy capture
+- **Fallback Option**: Alternative to Floyd-Steinberg when performance is critical
 
 ### Black & White (Monochrome) Feature for OLED/Monochrome Displays
 For future OLED and other monochrome (1-bit) display support, a new black-and-white mode is available. This mode uses a simple, fast 8x8 Bayer ordered dithering algorithm (instead of the more CPU-intensive Floyd-Steinberg method) to simulate grayscale on black-and-white screens. This approach is chosen for its efficiency and suitability for microcontrollers, making it ideal for OLED and similar displays. Enable this in the display configuration for best results on monochrome hardware.
@@ -117,7 +146,9 @@ Edit `main.cpp` and uncomment your display type:
 // Choose display type: uncomment one of these lines
 //#define USE_ST7789
 //#define USE_ILI9341
-#define USE_ST7796    // ← Uncomment your display
+//#define USE_ILI9342
+//#define USE_ST7796
+#define USE_SH1107    // ← Uncomment your display
 ```
 
 ### 3. Build with Ninja (Recommended)
@@ -149,16 +180,25 @@ make -j4
 ├── CMakeLists.txt               # Build configuration
 ├── include/                     # Header files
 │   ├── logo.h                  # Logo graphics data
+│   ├── dither.hpp              # Dithering algorithms (NEW)
+│   ├── scaler.hpp              # Image scaling utilities
 │   └── displays/               # Display drivers
 │       ├── st7789/            # ST7789 driver
 │       ├── ili9341/           # ILI9341 driver
-│       ├── ili9342/           # ILI9342 driver (NEW)
+│       ├── ili9342/           # ILI9342 driver
+│       ├── ili9488/           # ILI9488 driver (future)
+│       ├── sh1107/            # SH1107 OLED driver (NEW)
 │       └── st7796/            # ST7796 driver
-├── src/displays/               # Driver implementations
-│   ├── st7789/                # ST7789 source files
-│   ├── ili9341/               # ILI9341 source files
-│   ├── ili9342/               # ILI9342 source files
-│   └── st7796/                # ST7796 source files
+├── src/                        # Source implementations
+│   ├── dither.cpp             # Dithering algorithms (NEW)
+│   ├── scaler.cpp             # Image scaling utilities
+│   └── displays/              # Driver implementations
+│       ├── st7789/            # ST7789 source files
+│       ├── ili9341/           # ILI9341 source files
+│       ├── ili9342/           # ILI9342 source files
+│       ├── ili9488/           # ILI9488 source files
+│       ├── sh1107/            # SH1107 OLED source files (NEW)
+│       └── st7796/            # ST7796 source files
 ├── pio/gblcd/                 # PIO programs
 │   ├── gblcd.pio             # Game Boy LCD capture
 │   └── README.md             # PIO documentation
@@ -171,9 +211,11 @@ make -j4
 - **PIO Capture**: Dedicated state machine for precise Game Boy timing
 - **DMA Transfers**: Zero-CPU image copying for smooth frame rates
 - **Optimized Scaling**: Pre-computed lookup tables and unrolled loops
+- **Advanced Dithering**: Hardware-optimized Floyd-Steinberg and Bayer algorithms
 
 ### Display-Specific Optimizations
 - **ST7796**: 2x pixel scaling with loop unrolling
+- **SH1107 OLED**: Optimized monochrome conversion with dithering
 - **Color Lookup**: Pre-computed Game Boy color palettes
 - **Buffer Management**: Optimized buffer sizes per display
 
@@ -209,6 +251,16 @@ config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz
 Tune buffer sizes for performance:
 ```cpp
 config.dma.buffer_size = 4096;  // Larger = smoother, more RAM
+```
+
+### Dithering Algorithm Selection
+Choose between dithering algorithms for monochrome displays:
+```cpp
+// High quality Floyd-Steinberg (slower, better quality)
+floyd_steinberg_dither(buffer, width, height, palette, white, black);
+
+// Fast Bayer ordered dithering (faster, good quality)
+fast_bayer_dither(buffer, width, height, palette, white, black);
 ```
 
 ## 🐛 Troubleshooting
@@ -247,6 +299,8 @@ ninja
 ### Memory Usage
 - **Source Buffer**: 46KB (160x144x2 bytes)
 - **Scaled Buffer**: 101KB-180KB (depending on display)
+- **SH1107 Buffer**: 2KB (128x128÷8 bytes for monochrome)
+- **Dithering Buffer**: 32KB temporary space for Floyd-Steinberg
 - **Total RAM**: ~230KB (fits comfortably in RP2040's 264KB)
 
 ## 🛠️ Development

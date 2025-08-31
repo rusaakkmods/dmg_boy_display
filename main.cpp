@@ -12,10 +12,10 @@
 
 // Choose display type: uncomment one of these lines
 //#define USE_ST7789
-//#define USE_ILI9341
+#define USE_ILI9341
 //#define USE_ILI9342
 //#define USE_ST7796
-#define USE_SH1107
+//#define USE_SH1107
 
 // Uncomment to enable dithering for monochrome display
 //#define ENABLE_BW_DITHER
@@ -196,8 +196,8 @@ int main() {
     sh1107::SH1107 lcd;
     sh1107::Config config;
     config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz SPI speed
-    config.dma.enabled = true; // Enable DMA for faster data transfer
-    config.dma.buffer_size = 256; // Buffer size for DMA transfers
+    config.dma.enabled = true;
+    config.dma.buffer_size = 256;
 #endif
 
     // Set common config values
