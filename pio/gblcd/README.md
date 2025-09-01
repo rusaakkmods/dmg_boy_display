@@ -17,43 +17,45 @@ The `gblcd.pio` is a specialized PIO program designed to capture raw LCD data fr
 
 The gblcd.pio program captures:
 - **Pixel Data**: Raw 2-bit grayscale pixel information from the Game Boy LCD
-- **Timing Signals**: HSYNC, VSYNC, and pixel clock synchronization
+- **Timing Signals**: VSYNC and pixel clock synchronization
 - **Frame Data**: Complete 160x144 pixel frames at 59.7 Hz refresh rate
 - **Real-time Processing**: Zero-latency capture suitable for live display output
 
 ## How it Works
 
 ### PIO Architecture
-The program utilizes the RP2040's Programmable I/O (PIO) state machines to:
-
-1. **State Machine 0**: Captures horizontal sync (HSYNC) and manages line timing
-2. **State Machine 1**: Captures pixel data with precise clock synchronization  
-3. **State Machine 2**: Handles vertical sync (VSYNC) and frame management
-4. **State Machine 3**: Manages data transfer to main CPU via DMA
+The program utilizes the RP2040's Programmable I/O (PIO) **Single State Machine** to captures pixel data and VSYNC with precise clock synchronization
+   - Waits for clock edges on PIO pin index 0 (GPIO 2 - Game Boy clock)
+   - Reads 4 input pins simultaneously using pin indices 0-3 (GPIO 2-5)
+   - PIO pin index 0 (GPIO 2): Game Boy clock signal (CPG)
+   - PIO pin index 1 (GPIO 3): Pixel data bit 0 (LD0)
+   - PIO pin index 2 (GPIO 4): Pixel data bit 1 (LD1)
+   - PIO pin index 3 (GPIO 5): VSYNC signal
+   - Transfers data to main CPU via FIFO
 
 ### Signal Capture Process
 
 ```
-Game Boy LCD → PIO State Machines → DMA → CPU Processing → External Display
+Game Boy LCD → PIO State Machine → CPU Processing → External Display
 ```
 
 #### 1. Signal Input
-- **CPG (Clock Pulse Generator)**: 4.194304 MHz pixel clock from Game Boy
-- **LD0-LD1**: 2-bit pixel data lines (grayscale values 0-3)
-- **LSYNC**: Line sync signal for horizontal timing
-- **VSYNC**: Vertical sync signal for frame timing
+- **CPG (Clock Pulse Generator)**: 4.194304 MHz pixel clock from Game Boy (GPIO 2)
+- **LD0-LD1**: 2-bit pixel data lines (grayscale values 0-3) on GPIO 3-4
+- **VSYNC**: Vertical sync signal for frame timing (GPIO 5)
+- Note: PIO waits on clock (GPIO 2) then captures all signals simultaneously
 
 #### 2. Data Processing
 - PIO captures 2-bit pixels at 4.194304 MHz rate
 - Each line contains 160 pixels (320 bits of data)
 - Frame consists of 144 active lines
-- Automatic synchronization with Game Boy timing
+- Automatic synchronization with Game Boy timing using VSYNC
 
 #### 3. Memory Management
-- Double-buffered DMA for continuous capture
+- CPU polling of PIO FIFO for continuous capture
 - 23,040 bytes per frame (160×144×1 byte per pixel)
-- Automatic buffer switching for smooth operation
-- Zero-copy transfer to display drivers
+- Frame synchronization via VSYNC detection
+- Direct transfer to display drivers
 
 ### Technical Specifications
 
@@ -72,12 +74,15 @@ Game Boy LCD → PIO State Machines → DMA → CPU Processing → External Disp
 Connect the following Game Boy signals to Raspberry Pi Pico GPIO pins:
 
 ```cpp
-// Default pin assignments (configurable in main.cpp)
-#define GB_CLK_PIN    2   // Game Boy pixel clock (CPG)
-#define GB_DATA0_PIN  3   // Game Boy data bit 0 (LD0)  
-#define GB_DATA1_PIN  4   // Game Boy data bit 1 (LD1)
-#define GB_HSYNC_PIN  5   // Game Boy horizontal sync (LSYNC)
-#define GB_VSYNC_PIN  6   // Game Boy vertical sync (VSYNC)
+// Pin assignments - PIO uses pin indices starting from GPIO 2
+#define GB_CLK_PIN    2   // Game Boy pixel clock (CPG) - PIO pin index 0
+#define GB_DATA0_PIN  3   // Game Boy data bit 0 (LD0) - PIO pin index 1
+#define GB_DATA1_PIN  4   // Game Boy data bit 1 (LD1) - PIO pin index 2  
+#define GB_VSYNC_PIN  5   // Game Boy vertical sync (VSYNC) - PIO pin index 3
+
+// PIO configuration maps pin indices to GPIO pins:
+// sm_config_set_in_pins(&config, 2) sets GPIO 2 as PIO pin index 0
+// This automatically assigns GPIO 3,4,5 to PIO pin indices 1,2,3
 ```
 
 ### Software Integration
@@ -94,9 +99,9 @@ gblcd_program_init(pio0, 0, offset, clk_pin, data_pin);
 
 ## Performance Features
 
-- **Zero CPU Overhead**: PIO handles all timing-critical operations
-- **DMA Integration**: Automatic memory transfers without CPU intervention
-- **Real-time Capture**: No frame drops or synchronization issues
+- **Minimal CPU Overhead**: PIO handles timing-critical pixel capture
+- **FIFO Integration**: Automatic data transfers without complex buffering
+- **Real-time Capture**: Frame-synchronized capture via VSYNC detection
 - **Low Latency**: Immediate processing suitable for gaming applications
 - **Power Efficient**: Dedicated hardware reduces power consumption
 
@@ -114,7 +119,7 @@ This library enables various Game Boy LCD capture applications:
 ### Timing Requirements
 - The PIO program is carefully tuned for Game Boy LCD timing
 - Clock edges and data sampling are precisely aligned
-- HSYNC and VSYNC detection ensures proper frame synchronization
+- VSYNC detection ensures proper frame synchronization
 
 ### Buffer Management
 - Implements ping-pong buffering for continuous operation
