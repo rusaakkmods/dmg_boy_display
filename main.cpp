@@ -71,13 +71,13 @@
     #endif
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
-    #define LCD_W 240
-    #define LCD_H 320
-    #define Y_OFF 0
-    #define X_OFF 0
-    #define DISPLAY_ROTATION ili9341::ROTATION_0
+    #define LCD_W 320      // After 90° rotation: width becomes 320
+    #define LCD_H 240      // After 90° rotation: height becomes 240  
+    #define Y_OFF 0        // No Y offset needed
+    #define X_OFF 26       // Center horizontally: (320 - 267) / 2 ≈ 26
+    #define DISPLAY_ROTATION ili9341::ROTATION_90
     #define FILL_COLOR ili9341::BLACK
-    #define DISPLAY_SCALE 1.5
+    #define DISPLAY_SCALE 1.67
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
     #define LCD_W 320
