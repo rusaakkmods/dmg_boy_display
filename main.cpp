@@ -73,11 +73,11 @@
     #include "displays/ili9341/ili9341.hpp"
     #define LCD_W 320      
     #define LCD_H 240      
-    #define Y_OFF 4        
+    #define Y_OFF 0        
     #define X_OFF 46       
     #define DISPLAY_ROTATION ili9341::ROTATION_270
     #define FILL_COLOR ili9341::BLACK
-    #define DISPLAY_SCALE 1.6
+    #define DISPLAY_SCALE 1.67
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
     #define LCD_W 320
@@ -145,10 +145,10 @@ static const uint16_t BW_WHITE = 0xFFFF;
         };
     #elif defined(USE_ILI9341)
         static const uint16_t gb_colors[4] = {
-            0xFFFF,  // Lightest - Pure white
-            0xad75,  // Light - 75% gray (more gradual transition)
-            0x630c,  // Dark - 50% gray (better mid-tone)
-            0x0000   // Darkest - Pure black
+            0x9772,  // Bright saturated green - much more vibrant background
+            0x2A85,  // Dark forest green - good contrast
+            0x64ED,  // Rich medium green - deeper saturation
+            0x1082   // Very dark green - strong contrast
         };
     #elif defined(USE_ILI9342)
         static const uint16_t gb_colors[4] = {
@@ -180,7 +180,7 @@ int main() {
     ili9341::ILI9341 lcd;
     ili9341::Config config;
     config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.dma.buffer_size = 2048;  // 256 pixels * 2 bytes * 4 lines = 2048 bytes for efficient DMA
+    config.dma.buffer_size = 2560;  // 267 pixels * 2 bytes * 4.8 lines ≈ 2560 bytes for efficient DMA
     config.dma.enabled = true;
 #elif defined(USE_ILI9342)
     ili9342::ILI9342 lcd;
