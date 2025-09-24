@@ -144,7 +144,12 @@ static const uint16_t BW_WHITE = 0xFFFF;
             0x1082   // Very dark green - strong contrast
         };
     #elif defined(USE_ILI9341)
-        static const uint16_t gb_colors[4] = {0xFFFF, 0x8410, 0xC618, 0x0000};
+        static const uint16_t gb_colors[4] = {
+            0x9772,  // Bright saturated green - much more vibrant background
+            0x2A85,  // Dark forest green - good contrast
+            0x64ED,  // Rich medium green - deeper saturation
+            0x1082   // Very dark green - strong contrast
+        };
     #elif defined(USE_ILI9342)
         static const uint16_t gb_colors[4] = {
             0x3e88,  // Lightest green - (background)
