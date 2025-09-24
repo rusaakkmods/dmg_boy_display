@@ -73,11 +73,11 @@
     #include "displays/ili9341/ili9341.hpp"
     #define LCD_W 320      
     #define LCD_H 240      
-    #define Y_OFF 0        
-    #define X_OFF 46       
+    #define Y_OFF 7
+    #define X_OFF 46   
     #define DISPLAY_ROTATION ili9341::ROTATION_270
     #define FILL_COLOR ili9341::BLACK
-    #define DISPLAY_SCALE 1.67
+    #define DISPLAY_SCALE 1.6
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
     #define LCD_W 320
@@ -144,12 +144,7 @@ static const uint16_t BW_WHITE = 0xFFFF;
             0x1082   // Very dark green - strong contrast
         };
     #elif defined(USE_ILI9341)
-        static const uint16_t gb_colors[4] = {
-            0x9772,  // Bright saturated green - much more vibrant background
-            0x2A85,  // Dark forest green - good contrast
-            0x64ED,  // Rich medium green - deeper saturation
-            0x1082   // Very dark green - strong contrast
-        };
+        static const uint16_t gb_colors[4] = {0xFFFF, 0x8410, 0xC618, 0x0000};
     #elif defined(USE_ILI9342)
         static const uint16_t gb_colors[4] = {
             0x3e88,  // Lightest green - (background)
