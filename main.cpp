@@ -137,9 +137,9 @@ static const uint16_t BW_WHITE = 0xFFFF;
             0x0000   // Darkest - Pure black
         };
     #endif
-#else;
+#else
     // Color Order - 0: Lightest, 1: Dark, 2: Lighter, 3: Darkest
-    static const uint16_t gb_colors[4] = {0xffa6, 0x6302, 0xb544, 0x18c1};
+    static const uint16_t gb_colors[4] = {0x9ccc, 0x39e5, 0x6b49, 0x1081};
 #endif
 
 int main() {
