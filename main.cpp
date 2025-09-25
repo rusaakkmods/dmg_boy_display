@@ -25,6 +25,8 @@
 // DITHER_BEST - Floyd-Steinberg error diffusion (best quality, higher performance cost)
 #define DITHER_BEST
 
+// Game Boy capture and color processing options can be added here if needed
+
 // just for fun!!
 // special mods, negative film color inversion 
 // only works on "modified" st7789
@@ -135,36 +137,9 @@ static const uint16_t BW_WHITE = 0xFFFF;
             0x0000   // Darkest - Pure black
         };
     #endif
-#else
-    #ifdef USE_ST7789
-        static const uint16_t gb_colors[4] = {
-            0x9772,  // Bright saturated green - much more vibrant background
-            0x64ED,  // Rich medium green - deeper saturation
-            0x2A85,  // Dark forest green - good contrast
-            0x1082   // Very dark green - strong contrast
-        };
-    #elif defined(USE_ILI9341)
-        static const uint16_t gb_colors[4] = {
-            0x9772,  // Bright saturated green - much more vibrant background
-            0x2A85,  // Dark forest green - good contrast
-            0x64ED,  // Rich medium green - deeper saturation
-            0x1082   // Very dark green - strong contrast
-        };
-    #elif defined(USE_ILI9342)
-        static const uint16_t gb_colors[4] = {
-            0x3e88,  // Lightest green - (background)
-            0x2c05,  // Light green
-            0x1a63,  // Dark green
-            0x08c1   // Darkest green
-        };
-    #elif defined(USE_ST7796)
-        static const uint16_t gb_colors[4] = {
-            0x4E09,  // Lightest green - #4bc24bff (background) - same as ILI9341
-            0x3526,  // Light green - #37a537ff
-            0x2384,  // Dark green - #277227ff
-            0x2224   // Darkest green - #234623ff
-        };
-    #endif
+#else;
+    // Color Order - 0: Lightest, 1: Dark, 2: Lighter, 3: Darkest
+    static const uint16_t gb_colors[4] = {0xffa6, 0x6302, 0xb544, 0x18c1};
 #endif
 
 int main() {
@@ -223,10 +198,27 @@ int main() {
     lcd.setBrightness(255);
 #endif
 
-    // this will invert color! for testing
-    //lcd.invertDisplay(false);
-
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
+    
+    // // Test color rendering to verify display driver works
+    // uint16_t test_red = 0xF800;    // Pure red in RGB565
+    // uint16_t test_green = 0x07E0;  // Pure green in RGB565  
+    // uint16_t test_blue = 0x001F;   // Pure blue in RGB565
+    // uint16_t test_yellow = 0xFFE0; // Pure yellow in RGB565
+    
+    // // Draw test color bars - these should show correct colors
+    // lcd.fillRect(0, 0, 80, 60, test_red);
+    // lcd.fillRect(80, 0, 80, 60, test_green);  
+    // lcd.fillRect(160, 0, 80, 60, test_blue);
+    // lcd.fillRect(240, 0, 80, 60, test_yellow);
+    
+    // // Test our Game Boy palette colors directly
+    // lcd.fillRect(0, 60, 80, 60, gb_colors[0]);   // Should be yellow/cream
+    // lcd.fillRect(80, 60, 80, 60, gb_colors[1]);  // Should be brown
+    // lcd.fillRect(160, 60, 80, 60, gb_colors[2]); // Should be dark brown  
+    // lcd.fillRect(240, 60, 80, 60, gb_colors[3]); // Should be very dark
+    
+    // sleep_ms(3000); // Wait 3 seconds to see test colors
     #ifdef ENABLE_BW_DITHER
         static const uint16_t* logo = (uint16_t*)rMODS_logo_bw_smaller;
         int logo_width = SMALLER_LOGO_WIDTH;
@@ -280,12 +272,19 @@ int main() {
 
         // ---- Capture 160x144 into screenBuffer ----
         uint16_t* bufPtr = screenBuffer;
+        
         for (y = 0; y < DMG_H; y++) {
             for (x = 0; x < DMG_W; x++) {
                 if (x > 0 || y > 0) result = pio_sm_get_blocking(pio, state_machine_id);
-                data0 = (result >> 29) & 1;
-                data1 = (result >> 30) & 1;
-                *bufPtr++ = gb_colors[(data1 << 1) | data0];
+                
+                // Extract Game Boy LCD data bits
+                data0 = (result >> 29) & 1;  // LD0 - GPIO 3
+                data1 = (result >> 30) & 1;  // LD1 - GPIO 4
+                
+                // Game Boy pixel format: LD1,LD0 forms 2-bit value (0-3)
+                uint8_t gb_pixel_value = (data1 << 1) | data0;
+                
+                *bufPtr++ = gb_colors[gb_pixel_value];
             }
         }
 
