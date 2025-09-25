@@ -164,9 +164,9 @@ void ILI9341::initializeDisplay() {
     _hal.writeCommand(ILI9341_VMCTR2);
     _hal.writeData(0x86);
     
-    // Memory access control (RGB format, corrected orientation)
+    // Memory access control (BGR format for color correction)
     _hal.writeCommand(ILI9341_MADCTL);
-    _hal.writeData(0x40);  // MX=1, RGB order for correct color display
+    _hal.writeData(0x48);  // MX=1, BGR order to fix color channel swap
     
     // Pixel format
     _hal.writeCommand(ILI9341_PIXFMT);
@@ -287,25 +287,25 @@ void ILI9341::setRotation(Rotation rotation) {
         native_height = old_width;
     }
     
-    // Set MADCTL value for ILI9341 (rotated 180 degrees from ST7789)
+    // Set MADCTL value for ILI9341 with BGR color order
     switch (rotation) {
         case ROTATION_0:
-            madctl = MADCTL_MY | MADCTL_RGB;  // RGB order, rotated 180 from default
+            madctl = MADCTL_MY | MADCTL_BGR;  // BGR order for color correction
             _hal.setWidth(native_width);
             _hal.setHeight(native_height);
             break;
         case ROTATION_90:
-            madctl = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_RGB;
+            madctl = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
             _hal.setWidth(native_height);
             _hal.setHeight(native_width);
             break;
         case ROTATION_180:
-            madctl = MADCTL_MX | MADCTL_RGB;
+            madctl = MADCTL_MX | MADCTL_BGR;
             _hal.setWidth(native_width);
             _hal.setHeight(native_height);
             break;
         case ROTATION_270:
-            madctl = MADCTL_MV | MADCTL_RGB;
+            madctl = MADCTL_MV | MADCTL_BGR;
             _hal.setWidth(native_height);
             _hal.setHeight(native_width);
             break;
