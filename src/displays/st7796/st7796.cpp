@@ -65,7 +65,7 @@ void ST7796::initializeDisplay() {
     
     // Memory Access Control
     _hal.writeCommand(ST7796_MADCTL);
-    _hal.writeData(0x48);  // RGB color filter, Normal mode
+    _hal.writeData(0x40);  // RGB color filter, Normal mode - removed BGR flag
     
     // Pixel Format Set
     _hal.writeCommand(ST7796_COLMOD);
