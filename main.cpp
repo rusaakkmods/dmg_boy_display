@@ -27,7 +27,7 @@
 #define DITHER_BEST
 
 // Palette selection
-#define SELECTED_PALETTE GREEN_SHADES
+#define SELECTED_PALETTE PALETTE_RETRO
 
 //#define ENABLE_ST7789_NEGATIVE_FILM
 
@@ -182,7 +182,7 @@ int main() {
 #if defined(USE_SH1107)
     lcd.setBrightness(64);
 #elif defined(USE_ILI9341)
-    lcd.setBrightness(240);
+    lcd.setBrightness(255);
 #endif
 
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
