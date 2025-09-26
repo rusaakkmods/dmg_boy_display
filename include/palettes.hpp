@@ -16,4 +16,5 @@ static const uint16_t PALETTE_ROMANCE[4] = {0xbcb3, 0xbeca, 0x9ed8, 0x0840};
 static const uint16_t PALETTE_MODERN[4] = {0xc6ff, 0x2bd3, 0xbd4f, 0x32ab};
 static const uint16_t PALETTE_MODERN2[4] = {0xcedd, 0x2c94, 0xcbb2, 0x0883};
 static const uint16_t PALETTE_PEACH[4] = {0xf7be, 0xc4ac, 0xfe94, 0x31d3};
-static const uint16_t PALETTE_NEON[4] = {0x07e0, 0xf800, 0xffc0, 0x101f};
+static const uint16_t PALETTE_NEON[4] = {0xffc0, 0x101f, 0x07e0, 0xf800};
+static const uint16_t PALETTE_HIGHLIGHT_BLUE[4] = {0xef9e, 0x337a, 0x651c, 0x1084};
