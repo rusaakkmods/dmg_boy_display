@@ -5,6 +5,7 @@
 #include "logo.h"
 #include "scaler.hpp"
 #include "dither.hpp"
+#include "palettes.hpp"
 #include <stdbool.h>
 #include "hardware/pio.h"
 #include "hardware/spi.h"
@@ -25,17 +26,16 @@
 // DITHER_BEST - Floyd-Steinberg error diffusion (best quality, higher performance cost)
 #define DITHER_BEST
 
-// just for fun!!
-// special mods, negative film color inversion 
-// only works on "modified" st7789
-// uncomment to enable
+// Palette selection
+#define SELECTED_PALETTE PALETTE_MODERN2
+
 //#define ENABLE_ST7789_NEGATIVE_FILM
 
-// If using the SH1107 (monochrome) force BW dither on
+// Force BW dither for SH1107 monochrome display
 #if defined(USE_SH1107)
-#ifndef ENABLE_BW_DITHER
-#define ENABLE_BW_DITHER
-#endif
+    #ifndef ENABLE_BW_DITHER
+        #define ENABLE_BW_DITHER
+    #endif
 #endif
 
 // Pin definitions
@@ -71,13 +71,13 @@
     #endif
 #elif defined(USE_ILI9341)
     #include "displays/ili9341/ili9341.hpp"
-    #define LCD_W 240
-    #define LCD_H 320
-    #define Y_OFF 0
-    #define X_OFF 0
-    #define DISPLAY_ROTATION ili9341::ROTATION_0
+    #define LCD_W 320      
+    #define LCD_H 240      
+    #define Y_OFF 7
+    #define X_OFF 46   
+    #define DISPLAY_ROTATION ili9341::ROTATION_270
     #define FILL_COLOR ili9341::BLACK
-    #define DISPLAY_SCALE 1.5
+    #define DISPLAY_SCALE 1.6
 #elif defined(USE_ILI9342)
     #include "displays/ili9342/ili9342.hpp"
     #define LCD_W 320
@@ -106,65 +106,28 @@
     #define FILL_COLOR sh1107::BLACK
     #define DISPLAY_SCALE 0.8
 #else
-    #error "Please define USE_ST7789, USE_ILI9341, USE_ILI9342, or USE_ST7796"
+    #error "Please define a display type"
 #endif
 
 #define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
-// BW output constants used by the fast dither path
 static const uint16_t BW_BLACK = 0x0000;
 static const uint16_t BW_WHITE = 0xFFFF;
 
-
-// Visit this website providing tools to preview color https://rgbcolorpicker.com/565
 // Palettes setup
 #ifdef ENABLE_BW_DITHER
     #ifdef DITHER_BEST
         static const uint16_t gb_colors[4] = {
-            0xFFFF,  // Lightest - Pure white
-            0xAAAA,  // Light - 75% gray (more gradual transition)
-            0x4444,  // Dark - 50% gray (better mid-tone)
-            0x0000   // Darkest - Pure black
+            0xFFFF, 0xAAAA, 0x4444, 0x0000
         };
     #else
         static const uint16_t gb_colors[4] = {
-            0xFFFF,  // Lightest - Pure white
-            0x9999,  // Light - 75% gray (more gradual transition)
-            0x5555,  // Dark - 50% gray (better mid-tone)
-            0x0000   // Darkest - Pure black
+            0xFFFF, 0x9999, 0x5555, 0x0000
         };
     #endif
 #else
-    #ifdef USE_ST7789
-        static const uint16_t gb_colors[4] = {
-            0x9772,  // Bright saturated green - much more vibrant background
-            0x64ED,  // Rich medium green - deeper saturation
-            0x2A85,  // Dark forest green - good contrast
-            0x1082   // Very dark green - strong contrast
-        };
-    #elif defined(USE_ILI9341)
-        static const uint16_t gb_colors[4] = {
-            0x9772,  // Bright saturated green - much more vibrant background
-            0x4c49,  // Rich medium green - deeper saturation
-            0x5e0b,  // Dark forest green - good contrast
-            0x1082   // Very dark green - strong contrast
-        };
-    #elif defined(USE_ILI9342)
-        static const uint16_t gb_colors[4] = {
-            0x3e88,  // Lightest green - (background)
-            0x2c05,  // Light green
-            0x1a63,  // Dark green
-            0x08c1   // Darkest green
-        };
-    #elif defined(USE_ST7796)
-        static const uint16_t gb_colors[4] = {
-            0x4E09,  // Lightest green - #4bc24bff (background) - same as ILI9341
-            0x3526,  // Light green - #37a537ff
-            0x2384,  // Dark green - #277227ff
-            0x2224   // Darkest green - #234623ff
-        };
-    #endif
+    static const uint16_t* gb_colors = SELECTED_PALETTE;
 #endif
 
 int main() {
@@ -173,31 +136,31 @@ int main() {
 #ifdef USE_ST7789
     st7789::ST7789 lcd;
     st7789::Config config;
-    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.dma.buffer_size = 480;  // 240 pixels * 2 bytes = 480 bytes per line
+    config.spi_speed_hz = 40 * 1000 * 1000;
+    config.dma.buffer_size = 480;
     config.dma.enabled = true;
 #elif defined(USE_ILI9341)
     ili9341::ILI9341 lcd;
     ili9341::Config config;
-    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
+    config.spi_speed_hz = 40 * 1000 * 1000;
+    config.dma.buffer_size = 2560;
     config.dma.enabled = true;
 #elif defined(USE_ILI9342)
     ili9342::ILI9342 lcd;
     ili9342::Config config;
-    config.spi_speed_hz = 40 * 1000 * 1000;  // 40MHz
-    config.dma.buffer_size = 960;  // 240 pixels * 2 bytes * 2 lines = 960 bytes
+    config.spi_speed_hz = 40 * 1000 * 1000;
+    config.dma.buffer_size = 960;
     config.dma.enabled = true;
 #elif defined(USE_ST7796)
     st7796::ST7796 lcd;
     st7796::Config config;
-    config.spi_speed_hz = 62.5 * 1000 * 1000;  // 62.5MHz
-    config.dma.buffer_size = 4096;  // 4KB buffer
+    config.spi_speed_hz = 62.5 * 1000 * 1000;
+    config.dma.buffer_size = 4096;
     config.dma.enabled = true;
 #elif defined(USE_SH1107)
     sh1107::SH1107 lcd;
     sh1107::Config config;
-    config.spi_speed_hz = 8 * 1000 * 1000; // 8MHz SPI speed
+    config.spi_speed_hz = 8 * 1000 * 1000;
     config.dma.enabled = true;
     config.dma.buffer_size = 256;
 #endif
@@ -216,17 +179,36 @@ int main() {
     lcd.begin(config);
     lcd.setRotation(config.rotation);
 
-    
 #if defined(USE_SH1107)
-    lcd.setBrightness(64); // Max stable brightness on 3.3V power - higher values cause vertical lines
+    lcd.setBrightness(64);
 #elif defined(USE_ILI9341)
     lcd.setBrightness(255);
 #endif
 
-    // this will invert color! for testing
-    //lcd.invertDisplay(false);
-
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
+    
+#ifdef ENABLE_TEST_COLOR
+    // Test color rendering to verify display driver works
+    uint16_t test_red = 0xF800;    // Pure red in RGB565
+    uint16_t test_green = 0x07E0;  // Pure green in RGB565  
+    uint16_t test_blue = 0x001F;   // Pure blue in RGB565
+    uint16_t test_yellow = 0xFFE0; // Pure yellow in RGB565
+    
+    // Draw test color bars - these should show correct colors
+    lcd.fillRect(0, 0, 80, 60, test_red);
+    lcd.fillRect(80, 0, 80, 60, test_green);  
+    lcd.fillRect(160, 0, 80, 60, test_blue);
+    lcd.fillRect(240, 0, 80, 60, test_yellow);
+    
+    // Test our Game Boy palette colors directly
+    lcd.fillRect(0, 60, 80, 60, gb_colors[0]);   // Should be yellow/cream
+    lcd.fillRect(80, 60, 80, 60, gb_colors[1]);  // Should be brown
+    lcd.fillRect(160, 60, 80, 60, gb_colors[2]); // Should be dark brown  
+    lcd.fillRect(240, 60, 80, 60, gb_colors[3]); // Should be very dark
+    
+    sleep_ms(3000); // Wait 3 seconds to see test colors
+#endif
+
     #ifdef ENABLE_BW_DITHER
         static const uint16_t* logo = (uint16_t*)rMODS_logo_bw_smaller;
         int logo_width = SMALLER_LOGO_WIDTH;
@@ -280,17 +262,23 @@ int main() {
 
         // ---- Capture 160x144 into screenBuffer ----
         uint16_t* bufPtr = screenBuffer;
+        
         for (y = 0; y < DMG_H; y++) {
             for (x = 0; x < DMG_W; x++) {
                 if (x > 0 || y > 0) result = pio_sm_get_blocking(pio, state_machine_id);
-                data0 = (result >> 29) & 1;
-                data1 = (result >> 30) & 1;
-                *bufPtr++ = gb_colors[(data1 << 1) | data0];
+                
+                // Extract Game Boy LCD data bits
+                data0 = (result >> 29) & 1;  // LD0 - GPIO 3
+                data1 = (result >> 30) & 1;  // LD1 - GPIO 4
+                
+                // Game Boy pixel format: LD1,LD0 forms 2-bit value (0-3)
+                uint8_t gb_pixel_value = (data1 << 1) | data0;
+                
+                *bufPtr++ = gb_colors[gb_pixel_value];
             }
         }
 
         if (DISPLAY_SCALE == 1) {
-            //no-scaling
             memcpy(scaledBuf, screenBuffer, DMG_W * DMG_H * sizeof(uint16_t));
         }
         else {

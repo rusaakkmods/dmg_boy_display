@@ -162,6 +162,7 @@ bool HAL::writeDataDma(const uint16_t* data, size_t len) {
     }
     
     // Convert 16-bit data to 8-bit for SPI transmission
+    // BGR order is handled by MADCTL register setting
     const uint8_t* byte_data = reinterpret_cast<const uint8_t*>(data);
     size_t byte_len = len * 2; // Each uint16_t becomes 2 uint8_t
     

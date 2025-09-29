@@ -21,8 +21,8 @@ void Graphics::drawPixel(int16_t x, int16_t y, uint16_t color) {
     _display->setAddrWindow(x, y, x, y);
     
     uint8_t colorBytes[2];
-    colorBytes[0] = (color >> 8) & 0xFF;
-    colorBytes[1] = color & 0xFF;
+    colorBytes[0] = (color >> 8) & 0xFF; // High byte first
+    colorBytes[1] = color & 0xFF;        // Low byte second
     _display->_hal.writeDataBulk(colorBytes, 2);
 }
 
@@ -73,7 +73,7 @@ void Graphics::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t col
     
     _display->setAddrWindow(x, y, x + w - 1, y + h - 1);
     
-    // Fill with color
+    // Fill with color (standard format with BGR mode)
     uint8_t colorBytes[2] = { (uint8_t)((color >> 8) & 0xFF), (uint8_t)(color & 0xFF) };
     
     for (int16_t i = 0; i < h; i++) {
@@ -187,10 +187,10 @@ void Graphics::drawImage(int16_t x, int16_t y, int16_t w, int16_t h, const uint1
     for (int32_t i = 0; i < w * h; i += 240) {
         int pixels_in_chunk = (i + 240 <= w * h) ? 240 : (w * h - i);
         
-        // Convert chunk to bytes
+        // Convert chunk to bytes (standard format with BGR mode)
         for (int j = 0; j < pixels_in_chunk; j++) {
-            colorBytes[j * 2] = (data[i + j] >> 8) & 0xFF;
-            colorBytes[j * 2 + 1] = data[i + j] & 0xFF;
+            colorBytes[j * 2] = (data[i + j] >> 8) & 0xFF;  // High byte first
+            colorBytes[j * 2 + 1] = data[i + j] & 0xFF;     // Low byte second
         }
         
         // Send chunk
