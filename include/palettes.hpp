@@ -8,6 +8,7 @@
 // Or this for nice random colors https://slashinfty.github.io/sgb-colors/
 
 static const uint16_t PALETTE_GRAYSCALE[4] = {0xFFFF, 0x9492, 0xdedb, 0x0000};
+static const uint16_t PALETTE_GRAYSCALE_INVERT[4] = {0x0000, 0xdedb, 0x9492, 0xFFFF};
 static const uint16_t PALETTE_GREEN_SHADES[4] = {0x9772, 0x2A85, 0x64ED, 0x1082};
 static const uint16_t PALETTE_YELLOW_SHADES[4] = {0xffa6, 0x6302, 0xb544, 0x18c1};
 static const uint16_t PALETTE_TEAL_SHADES[4] = {0x3e77, 0x1a89, 0x2c90, 0x08a2};

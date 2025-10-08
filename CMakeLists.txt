@@ -82,6 +82,7 @@ target_link_libraries(dmg_boy_display
     hardware_pwm
     hardware_i2c
     hardware_adc
+    hardware_watchdog
 )
 
 pico_add_extra_outputs(dmg_boy_display)

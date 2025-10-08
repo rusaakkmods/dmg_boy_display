@@ -10,6 +10,7 @@
 #include "hardware/pio.h"
 #include "hardware/spi.h"
 #include "gblcd.pio.h"
+#include "hardware/watchdog.h"
 
 // Choose display type: uncomment one of these lines
 //#define USE_ST7789
@@ -27,8 +28,7 @@
 #define DITHER_BEST
 
 // Palette selection
-#define SELECTED_PALETTE PALETTE_MODERN2
-
+#define SELECTED_PALETTE PALETTE_MODERN
 //#define ENABLE_ST7789_NEGATIVE_FILM
 
 // Force BW dither for SH1107 monochrome display
@@ -74,7 +74,7 @@
     #define LCD_W 320      
     #define LCD_H 240      
     #define Y_OFF 7
-    #define X_OFF 46   
+    #define X_OFF 48
     #define DISPLAY_ROTATION ili9341::ROTATION_270
     #define FILL_COLOR ili9341::BLACK
     #define DISPLAY_SCALE 1.6
@@ -131,6 +131,13 @@ static const uint16_t BW_WHITE = 0xFFFF;
 #endif
 
 int main() {
+
+    //NOTE: this is temporary workaround for an issue with V1 Board where LCD powered on first before MCU
+    if (!watchdog_caused_reboot()) {
+        watchdog_enable(300, true); 
+        while (1) { tight_loop_contents(); } 
+    }
+
     stdio_init_all();
     
 #ifdef USE_ST7789
