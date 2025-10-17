@@ -73,7 +73,7 @@
     #include "displays/ili9341/ili9341.hpp"
     #define LCD_W 320      
     #define LCD_H 240      
-    #define Y_OFF 7
+    #define Y_OFF 9
     #define X_OFF 48
     #define DISPLAY_ROTATION ili9341::ROTATION_270
     #define FILL_COLOR ili9341::BLACK
