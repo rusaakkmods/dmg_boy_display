@@ -50,8 +50,6 @@
 #define LCD_BRIGHTNESS  255
 
 // Palette Configuration
-#define DEFAUT_PALETTE PALETTE_MODERN
-
 static const uint16_t* const PALETTE_LIST[] = {
     PALETTE_MODERN,
     PALETTE_GRAYSCALE,
@@ -77,7 +75,7 @@ static const uint16_t* const PALETTE_LIST[] = {
 
 #define NUM_PALETTES (sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]))
 
-static const uint16_t* gb_colors = DEFAUT_PALETTE;
+static const uint16_t* gb_colors = PALETTE_MODERN;
 
 uint8_t get_selected_palette_index() {
     uint16_t adc_value = adc_read();
@@ -86,6 +84,63 @@ uint8_t get_selected_palette_index() {
         palette_index = NUM_PALETTES - 1;
     }
     return palette_index;
+}
+
+void display_logo(ili9341::ILI9341& lcd) {
+    static const uint16_t* logo = (uint16_t*)rMODS_logo_data;
+    int logo_width = RMODS_LOGO_WIDTH;
+    int logo_height = RMODS_LOGO_HEIGHT;
+    int logo_x = (int)(X_OFF + (SCALED_W - logo_width) / 2);
+    int logo_y = (int)(Y_OFF + (SCALED_H - logo_height) / 2);
+    
+    lcd.clearScreen(RMODS_LOGO_BACKGROUND);
+    lcd.drawImage(logo_x, logo_y, logo_width, logo_height, logo);
+}
+
+void display_test(ili9341::ILI9341& lcd) {
+    gpio_init(2);
+    gpio_set_dir(2, GPIO_OUT);
+
+    uint16_t test_red = 0xF800;
+    uint16_t test_green = 0x07E0;
+    uint16_t test_blue = 0x001F;
+    uint16_t test_yellow = 0xFFE0;
+    int i = 1;
+    
+    while (true) {
+        // Check palette selection
+        static uint8_t last_palette_index = 0xFF;
+        uint8_t current_palette_index = get_selected_palette_index();
+        
+        if (current_palette_index != last_palette_index) {
+            gb_colors = PALETTE_LIST[current_palette_index];
+            last_palette_index = current_palette_index;
+        }
+        
+        lcd.clearScreen(RMODS_LOGO_BACKGROUND);
+        
+        int h = 8 * i;
+        int w = 12 * i;
+        lcd.fillRect(0, 0, h, w, test_red);
+        lcd.fillRect(80, 0, h, w, test_green);
+        lcd.fillRect(160, 0, h, w, test_blue);
+        lcd.fillRect(240, 0, h, w, test_yellow);
+        gpio_put(2, 1);
+        sleep_ms(500);
+        
+        lcd.fillRect(0, 120, h, w, gb_colors[0]);
+        lcd.fillRect(80, 120, h, w, gb_colors[1]);
+        lcd.fillRect(160, 120, h, w, gb_colors[2]);
+        lcd.fillRect(240, 120, h, w, gb_colors[3]);
+        gpio_put(2, 0);
+        sleep_ms(500);
+
+        if (i >= 10) {
+            i = 1;
+        } else {
+            i++;
+        }
+    }
 }
 
 int main() {
@@ -117,52 +172,14 @@ int main() {
     lcd.begin(config);
     lcd.setRotation(config.rotation);
 
-    // Display logo
-    static const uint16_t* logo = (uint16_t*)rMODS_logo_data;
-    int logo_width = RMODS_LOGO_WIDTH;
-    int logo_height = RMODS_LOGO_HEIGHT;
-    int logo_x = (int)(X_OFF + (SCALED_W - logo_width) / 2);
-    int logo_y = (int)(Y_OFF + (SCALED_H - logo_height) / 2);
-    lcd.clearScreen(RMODS_LOGO_BACKGROUND);
-    lcd.drawImage(logo_x, logo_y, logo_width, logo_height, logo);
-    sleep_ms(100);
+    display_logo(lcd);
+    sleep_ms(100); /// wait for a moment before setting brightness
+
     lcd.setBrightness(LCD_BRIGHTNESS);
     sleep_ms(900);
 
 #ifdef ENABLE_DISPLAY_TEST
-    gpio_init(3);
-    gpio_set_dir(3, GPIO_OUT);
-
-    uint16_t test_red = 0xF800;
-    uint16_t test_green = 0x07E0;
-    uint16_t test_blue = 0x001F;
-    uint16_t test_yellow = 0xFFE0;
-    int i = 1;
-    while (true) {
-        lcd.clearScreen(RMODS_LOGO_BACKGROUND);
-        
-        int h = 8*i;
-        int w = 12*i;
-        lcd.fillRect(0, 0, h, w, test_red);
-        lcd.fillRect(80, 0,  h, w, test_green);  
-        lcd.fillRect(160, 0,  h, w, test_blue);
-        lcd.fillRect(240, 0,  h, w, test_yellow);
-        gpio_put(3,1);
-        sleep_ms(500);
-        
-        lcd.fillRect(0, 120,  h, w, gb_colors[0]);
-        lcd.fillRect(80, 120,  h, w, gb_colors[1]);
-        lcd.fillRect(160, 120,  h, w, gb_colors[2]);
-        lcd.fillRect(240, 120,  h, w, gb_colors[3]);
-        gpio_put(3,0);
-        sleep_ms(500);
-
-        if (i>= 10) {
-            i = 1;
-        } else {
-            i++;
-        }
-    }
+    display_test(lcd);
 #else
     // PIO initialization
     PIO pio = pio0;
