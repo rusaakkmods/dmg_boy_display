@@ -33,6 +33,7 @@
 #define PIN_RESET       7
 #define PIN_BL          8
 #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
+#define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
 
 // Game Boy LCD Specifications
 #define DMG_W 160
@@ -103,6 +104,13 @@ uint8_t get_selected_palette_index() {
     }
     
     return palette_index;
+}
+
+uint8_t get_brightness_from_adc() {
+    uint16_t adc_value = adc_read();
+    // Map 0-4095 to 5-255 (very dim to full bright)
+    uint8_t brightness = 5 + ((adc_value * 250) / 4096);
+    return brightness;
 }
 
 void display_logo(ili9341::ILI9341& lcd) {
@@ -192,7 +200,12 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
 int main() {
     stdio_init_all();
     
-    // Initialize ADC for palette selection
+    // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
+    gpio_init(PIN_MODE_SWITCH);
+    gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
+    gpio_pull_down(PIN_MODE_SWITCH);
+    
+    // Initialize ADC for palette/brightness selection
     adc_init();
     adc_gpio_init(PIN_PALETTE_ADC);
     adc_select_input(3);
@@ -321,16 +334,58 @@ int main() {
         
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         
-        // Palette selection AFTER rendering (only if not using BW dither)
+        // Check mode switch: LOW=brightness control, HIGH=palette selection
+        bool palette_mode = gpio_get(PIN_MODE_SWITCH);
+        
         #ifndef ENABLE_BW_DITHER
             static uint8_t last_palette_index = 0xFF;
-            uint8_t current_palette_index = get_selected_palette_index();
-            
-            if (current_palette_index != last_palette_index) {
-                gb_colors = PALETTE_LIST[current_palette_index];
-                last_palette_index = current_palette_index;
-            }
+            static uint8_t last_palette_candidate = 0xFF;
+            static bool was_in_palette_mode = false;
         #endif
+        
+        static uint8_t last_brightness_candidate = 0xFF;
+        static bool was_in_brightness_mode = false;
+        
+        if (palette_mode) {
+            // Palette selection mode (only if not using BW dither)
+            #ifndef ENABLE_BW_DITHER
+                uint8_t current_palette_index = get_selected_palette_index();
+                
+                // If we just entered palette mode, store current candidate
+                if (!was_in_palette_mode) {
+                    last_palette_candidate = current_palette_index;
+                    was_in_palette_mode = true;
+                }
+                
+                // Only change palette if pot value has changed while in palette mode
+                if (current_palette_index != last_palette_candidate) {
+                    gb_colors = PALETTE_LIST[current_palette_index];
+                    last_palette_index = current_palette_index;
+                    last_palette_candidate = current_palette_index;
+                }
+            #endif
+            
+            was_in_brightness_mode = false;
+        } else {
+            // Brightness control mode
+            #ifndef ENABLE_BW_DITHER
+                was_in_palette_mode = false;
+            #endif
+            
+            uint8_t current_brightness = get_brightness_from_adc();
+            
+            // If we just entered brightness mode, store current candidate
+            if (!was_in_brightness_mode) {
+                last_brightness_candidate = current_brightness;
+                was_in_brightness_mode = true;
+            }
+            
+            // Only change brightness if pot value has changed while in brightness mode
+            if (current_brightness != last_brightness_candidate) {
+                lcd.setBrightness(current_brightness);
+                last_brightness_candidate = current_brightness;
+            }
+        }
         
         vSyncFallingEdgeDetected = false;
     }
