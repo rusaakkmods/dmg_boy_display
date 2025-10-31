@@ -130,6 +130,9 @@ int main() {
     sleep_ms(900);
 
 #ifdef ENABLE_DISPLAY_TEST
+    gpio_init(3);
+    gpio_set_dir(3, GPIO_OUT);
+
     uint16_t test_red = 0xF800;
     uint16_t test_green = 0x07E0;
     uint16_t test_blue = 0x001F;
