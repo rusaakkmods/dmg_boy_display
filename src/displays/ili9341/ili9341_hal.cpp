@@ -63,6 +63,7 @@ bool HAL::init(const Config& config) {
     gpio_set_function(_config.pin_bl, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(_config.pin_bl);
     pwm_set_wrap(slice_num, 255);  // 8-bit resolution (0-255)
+    pwm_set_clkdiv(slice_num, 125.0f * 4);  // 125MHz / (256 * 125 * 4) ≈ 977 Hz (close to 1 kHz)
     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(_config.pin_bl), 0);  // Start at 0
     pwm_set_enabled(slice_num, true);
     
