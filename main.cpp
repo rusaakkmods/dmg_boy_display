@@ -18,6 +18,11 @@
 
 // Configuration
 #define ENABLE_DISPLAY_TEST
+//#define ENABLE_BW_DITHER  // Uncomment for black & white dithering
+
+// Dithering mode selection (only used if ENABLE_BW_DITHER is defined)
+#define DITHER_FAST   // Bayer dithering (fastest)
+//#define DITHER_BEST   // Floyd-Steinberg error diffusion (best quality)
 
 // Hardware Pin Definitions - v1.1a
 #define SPI_CHANNEL     spi0
@@ -75,7 +80,19 @@ static const uint16_t* const PALETTE_LIST[] = {
 
 #define NUM_PALETTES (sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]))
 
-static const uint16_t* gb_colors = PALETTE_MODERN;
+// Dither palette setup
+#ifdef ENABLE_BW_DITHER
+    static const uint16_t BW_BLACK = 0x0000;
+    static const uint16_t BW_WHITE = 0xFFFF;
+    
+    #ifdef DITHER_BEST
+        static const uint16_t gb_colors[4] = {0xFFFF, 0xAAAA, 0x4444, 0x0000};
+    #else
+        static const uint16_t gb_colors[4] = {0xFFFF, 0x9999, 0x5555, 0x0000};
+    #endif
+#else
+    static const uint16_t* gb_colors = PALETTE_MODERN;
+#endif
 
 uint8_t get_selected_palette_index() {
     uint16_t adc_value = adc_read();
@@ -108,14 +125,16 @@ void display_test(ili9341::ILI9341& lcd) {
     int i = 1;
     
     while (true) {
-        // Check palette selection
-        static uint8_t last_palette_index = 0xFF;
-        uint8_t current_palette_index = get_selected_palette_index();
-        
-        if (current_palette_index != last_palette_index) {
-            gb_colors = PALETTE_LIST[current_palette_index];
-            last_palette_index = current_palette_index;
-        }
+        // Check palette selection (only if not using BW dither)
+        #ifndef ENABLE_BW_DITHER
+            static uint8_t last_palette_index = 0xFF;
+            uint8_t current_palette_index = get_selected_palette_index();
+            
+            if (current_palette_index != last_palette_index) {
+                gb_colors = PALETTE_LIST[current_palette_index];
+                last_palette_index = current_palette_index;
+            }
+        #endif
         
         lcd.clearScreen(RMODS_LOGO_BACKGROUND);
         
@@ -220,14 +239,16 @@ int main() {
             lcd.clearScreen(FILL_COLOR);
         }
 
-        // Palette selection
-        static uint8_t last_palette_index = 0xFF;
-        uint8_t current_palette_index = get_selected_palette_index();
-        
-        if (current_palette_index != last_palette_index) {
-            gb_colors = PALETTE_LIST[current_palette_index];
-            last_palette_index = current_palette_index;
-        }
+        // Palette selection (only if not using BW dither)
+        #ifndef ENABLE_BW_DITHER
+            static uint8_t last_palette_index = 0xFF;
+            uint8_t current_palette_index = get_selected_palette_index();
+            
+            if (current_palette_index != last_palette_index) {
+                gb_colors = PALETTE_LIST[current_palette_index];
+                last_palette_index = current_palette_index;
+            }
+        #endif
 
         // Capture Game Boy frame
         uint16_t* bufPtr = screenBuffer;
@@ -272,6 +293,15 @@ int main() {
                 }
             }
         }
+        
+        // Apply dithering if enabled
+        #ifdef ENABLE_BW_DITHER
+            #ifdef DITHER_BEST
+                floyd_steinberg_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+            #else
+                fast_bayer_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+            #endif
+        #endif
         
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         vSyncFallingEdgeDetected = false;
