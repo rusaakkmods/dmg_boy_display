@@ -125,27 +125,40 @@ int main() {
     int logo_y = (int)(Y_OFF + (SCALED_H - logo_height) / 2);
     lcd.clearScreen(RMODS_LOGO_BACKGROUND);
     lcd.drawImage(logo_x, logo_y, logo_width, logo_height, logo);
-    sleep_ms(1000);
-
+    sleep_ms(100);
     lcd.setBrightness(LCD_BRIGHTNESS);
+    sleep_ms(900);
 
 #ifdef ENABLE_DISPLAY_TEST
     uint16_t test_red = 0xF800;
     uint16_t test_green = 0x07E0;
     uint16_t test_blue = 0x001F;
     uint16_t test_yellow = 0xFFE0;
-    while(true) {
-        lcd.fillRect(0, 0, 80, 60, test_red);
-        lcd.fillRect(80, 0, 80, 60, test_green);  
-        lcd.fillRect(160, 0, 80, 60, test_blue);
-        lcd.fillRect(240, 0, 80, 60, test_yellow);
+    int i = 1;
+    while (true) {
+        lcd.clearScreen(RMODS_LOGO_BACKGROUND);
         
-        lcd.fillRect(0, 60, 80, 60, gb_colors[0]);
-        lcd.fillRect(80, 60, 80, 60, gb_colors[1]);
-        lcd.fillRect(160, 60, 80, 60, gb_colors[2]);
-        lcd.fillRect(240, 60, 80, 60, gb_colors[3]);
+        int h = 8*i;
+        int w = 12*i;
+        lcd.fillRect(0, 0, h, w, test_red);
+        lcd.fillRect(80, 0,  h, w, test_green);  
+        lcd.fillRect(160, 0,  h, w, test_blue);
+        lcd.fillRect(240, 0,  h, w, test_yellow);
+        gpio_put(3,1);
+        sleep_ms(500);
         
-        sleep_ms(3000);
+        lcd.fillRect(0, 120,  h, w, gb_colors[0]);
+        lcd.fillRect(80, 120,  h, w, gb_colors[1]);
+        lcd.fillRect(160, 120,  h, w, gb_colors[2]);
+        lcd.fillRect(240, 120,  h, w, gb_colors[3]);
+        gpio_put(3,0);
+        sleep_ms(500);
+
+        if (i>= 10) {
+            i = 1;
+        } else {
+            i++;
+        }
     }
 #else
     // PIO initialization
