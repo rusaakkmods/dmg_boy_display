@@ -11,7 +11,7 @@ push block
 % c-sdk {
     static inline void gblcd_program_init(PIO pio, uint sm, uint offset) {
         pio_sm_config config = gblcd_program_get_default_config(offset);
-        sm_config_set_in_pins(&config, 2);
+        sm_config_set_in_pins(&config, 9); //start from pin 9
         pio_sm_init(pio, sm, offset, &config);
         pio_sm_set_enabled(pio, sm, true);
     }
