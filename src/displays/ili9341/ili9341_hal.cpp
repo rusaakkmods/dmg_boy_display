@@ -46,11 +46,13 @@ bool HAL::init(const Config& config) {
     // CS pin
     gpio_init(_config.pin_cs);
     gpio_set_dir(_config.pin_cs, GPIO_OUT);
+    gpio_set_slew_rate(_config.pin_cs, GPIO_SLEW_RATE_SLOW);  // Reduce overshoot/ringing
     gpio_put(_config.pin_cs, 1); // Deselect
     
     // DC pin
     gpio_init(_config.pin_dc);
     gpio_set_dir(_config.pin_dc, GPIO_OUT);
+    gpio_set_slew_rate(_config.pin_dc, GPIO_SLEW_RATE_SLOW);  // Reduce overshoot/ringing
     gpio_put(_config.pin_dc, 0);
     
     // Reset pin
@@ -214,7 +216,6 @@ void HAL::setBacklight(bool on) {
 }
 
 void HAL::setBrightness(uint8_t brightness) {
-    // Use PWM to control backlight brightness (0-255)
     uint slice_num = pwm_gpio_to_slice_num(_config.pin_bl);
     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(_config.pin_bl), brightness);
 }

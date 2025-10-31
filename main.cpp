@@ -17,7 +17,7 @@
 #define FIRMWARE_VERSION "v1.1a"
 
 // Configuration
-#define ENABLE_DISPLAY_TEST
+//#define ENABLE_DISPLAY_TEST
 //#define ENABLE_BW_DITHER  // Uncomment for black & white dithering
 
 // Dithering mode selection (only used if ENABLE_BW_DITHER is defined)
@@ -44,15 +44,15 @@
 #define DISPLAY_SCALE   1.6
 #define DISPLAY_ROTATION ili9341::ROTATION_270
 #define FILL_COLOR      ili9341::BLACK
-#define X_OFF 48
-#define Y_OFF 9
+#define X_OFF 49
+#define Y_OFF 7
 #define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
 // LCD SPI Configuration
 #define LCD_SPI_SPEED   (40 * 1000 * 1000)
 #define LCD_DMA_BUFFER  2560
-#define LCD_BRIGHTNESS  255
+#define LCD_BRIGHTNESS  128  // 50% brightness
 
 // Palette Configuration
 static const uint16_t* const PALETTE_LIST[] = {
@@ -97,9 +97,11 @@ static const uint16_t* const PALETTE_LIST[] = {
 uint8_t get_selected_palette_index() {
     uint16_t adc_value = adc_read();
     uint8_t palette_index = (adc_value * NUM_PALETTES) / 4096;
+    
     if (palette_index >= NUM_PALETTES) {
         palette_index = NUM_PALETTES - 1;
     }
+    
     return palette_index;
 }
 
@@ -114,15 +116,11 @@ void display_logo(ili9341::ILI9341& lcd) {
     lcd.drawImage(logo_x, logo_y, logo_width, logo_height, logo);
 }
 
-void display_test(ili9341::ILI9341& lcd) {
+void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scaledBuf, int* xmap, int* ymap) {
     gpio_init(2);
     gpio_set_dir(2, GPIO_OUT);
 
-    uint16_t test_red = 0xF800;
-    uint16_t test_green = 0x07E0;
-    uint16_t test_blue = 0x001F;
-    uint16_t test_yellow = 0xFFE0;
-    int i = 1;
+    int pattern = 0;
     
     while (true) {
         // Check palette selection (only if not using BW dither)
@@ -136,29 +134,58 @@ void display_test(ili9341::ILI9341& lcd) {
             }
         #endif
         
-        lcd.clearScreen(RMODS_LOGO_BACKGROUND);
+        // Generate test pattern in screenBuffer (160x144 Game Boy size)
+        // Pattern 0: Horizontal gradient (all 4 shades)
+        // Pattern 1: Vertical gradient
+        // Pattern 2: Checkerboard
         
-        int h = 8 * i;
-        int w = 12 * i;
-        lcd.fillRect(0, 0, h, w, test_red);
-        lcd.fillRect(80, 0, h, w, test_green);
-        lcd.fillRect(160, 0, h, w, test_blue);
-        lcd.fillRect(240, 0, h, w, test_yellow);
-        gpio_put(2, 1);
-        sleep_ms(500);
-        
-        lcd.fillRect(0, 120, h, w, gb_colors[0]);
-        lcd.fillRect(80, 120, h, w, gb_colors[1]);
-        lcd.fillRect(160, 120, h, w, gb_colors[2]);
-        lcd.fillRect(240, 120, h, w, gb_colors[3]);
-        gpio_put(2, 0);
-        sleep_ms(500);
-
-        if (i >= 10) {
-            i = 1;
-        } else {
-            i++;
+        for (int y = 0; y < DMG_H; y++) {
+            for (int x = 0; x < DMG_W; x++) {
+                uint8_t pixel_value = 0;
+                
+                if (pattern == 0) {
+                    // Horizontal gradient
+                    pixel_value = (x * 4) / DMG_W;
+                } else if (pattern == 1) {
+                    // Vertical gradient
+                    pixel_value = (y * 4) / DMG_H;
+                } else {
+                    // Checkerboard
+                    pixel_value = ((x / 40) + (y / 36)) % 4;
+                }
+                
+                if (pixel_value > 3) pixel_value = 3;
+                screenBuffer[y * DMG_W + x] = gb_colors[pixel_value];
+            }
         }
+        
+        // Scale the pattern
+        for (int dy = 0; dy < SCALED_H; dy++) {
+            const uint16_t* srcRow = &screenBuffer[ymap[dy] * DMG_W];
+            uint16_t* dstRow = &scaledBuf[dy * SCALED_W];
+            
+            for (int dx = 0; dx < SCALED_W; dx++) {
+                dstRow[dx] = srcRow[xmap[dx]];
+            }
+        }
+        
+        // Apply dithering if enabled
+        #ifdef ENABLE_BW_DITHER
+            #ifdef DITHER_BEST
+                floyd_steinberg_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+            #else
+                fast_bayer_dither(scaledBuf, SCALED_W, SCALED_H, gb_colors, BW_WHITE, BW_BLACK);
+            #endif
+        #endif
+        
+        // Draw to LCD
+        lcd.clearScreen(FILL_COLOR);
+        lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+        
+        gpio_put(2, pattern % 2);
+        sleep_ms(1000);
+        
+        pattern = (pattern + 1) % 3;
     }
 }
 
@@ -197,15 +224,6 @@ int main() {
     lcd.setBrightness(LCD_BRIGHTNESS);
     sleep_ms(900);
 
-#ifdef ENABLE_DISPLAY_TEST
-    display_test(lcd);
-#else
-    // PIO initialization
-    PIO pio = pio0;
-    uint state_machine_id = 0;
-    uint offset = pio_add_program(pio, &gblcd_program);
-    gblcd_program_init(pio, state_machine_id, offset);
-
     // Buffer allocation
     static uint16_t screenBuffer[DMG_W * DMG_H];
     static uint16_t scaledBuf[SCALED_W * SCALED_H];
@@ -213,6 +231,15 @@ int main() {
     static int xmap[SCALED_W];
     static int ymap[SCALED_H];
     buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
+
+#ifdef ENABLE_DISPLAY_TEST
+    display_test(lcd, screenBuffer, scaledBuf, xmap, ymap);
+#else
+    // PIO initialization
+    PIO pio = pio0;
+    uint state_machine_id = 0;
+    uint offset = pio_add_program(pio, &gblcd_program);
+    gblcd_program_init(pio, state_machine_id, offset);
 
     // Main loop variables
     int x = 0, y = 0;
@@ -238,17 +265,6 @@ int main() {
             firstRun = true;
             lcd.clearScreen(FILL_COLOR);
         }
-
-        // Palette selection (only if not using BW dither)
-        #ifndef ENABLE_BW_DITHER
-            static uint8_t last_palette_index = 0xFF;
-            uint8_t current_palette_index = get_selected_palette_index();
-            
-            if (current_palette_index != last_palette_index) {
-                gb_colors = PALETTE_LIST[current_palette_index];
-                last_palette_index = current_palette_index;
-            }
-        #endif
 
         // Capture Game Boy frame
         uint16_t* bufPtr = screenBuffer;
@@ -304,6 +320,18 @@ int main() {
         #endif
         
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+        
+        // Palette selection AFTER rendering (only if not using BW dither)
+        #ifndef ENABLE_BW_DITHER
+            static uint8_t last_palette_index = 0xFF;
+            uint8_t current_palette_index = get_selected_palette_index();
+            
+            if (current_palette_index != last_palette_index) {
+                gb_colors = PALETTE_LIST[current_palette_index];
+                last_palette_index = current_palette_index;
+            }
+        #endif
+        
         vSyncFallingEdgeDetected = false;
     }
 #endif
