@@ -108,8 +108,8 @@ uint8_t get_selected_palette_index() {
 
 uint8_t get_brightness_from_adc() {
     uint16_t adc_value = adc_read();
-    // Map 0-4095 to 5-255 (very dim to full bright)
-    uint8_t brightness = 5 + ((adc_value * 250) / 4096);
+    // Map 0-4095 to 5-128 (very dim to 50% max)
+    uint8_t brightness = 5 + ((adc_value * 123) / 4096);
     return brightness;
 }
 
