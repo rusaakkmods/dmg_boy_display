@@ -44,6 +44,7 @@
     #define PIN_DC 12
     #define PIN_RESET 13
     #define PIN_BL 8
+    #define PIN_PALETTE_ADC 29  // ADC3 - 10K trimmer for palette selection
 #endif
 
 // Game Boy LCD Specifications
@@ -107,7 +108,14 @@ static const uint16_t* const PALETTE_LIST[] = {
 #endif
 
 uint8_t get_selected_palette_index() {
-    uint16_t adc_value = adc_read();
+    // Read ADC multiple times and average to reduce noise
+    uint32_t adc_sum = 0;
+    for (int i = 0; i < 8; i++) {
+        adc_sum += adc_read();
+        sleep_us(10);  // Small delay between reads
+    }
+    uint16_t adc_value = adc_sum / 8;  // Average of 8 readings
+    
     uint8_t palette_index = (adc_value * NUM_PALETTES) / 4096;
     
     if (palette_index >= NUM_PALETTES) {
@@ -147,16 +155,14 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
     
     while (true) {
         // Check palette selection (only if not using BW dither)
-        #ifdef VERSION_V1_1a
-            #ifndef ENABLE_BW_DITHER
-                static uint8_t last_palette_index = 0xFF;
-                uint8_t current_palette_index = get_selected_palette_index();
-                
-                if (current_palette_index != last_palette_index) {
-                    gb_colors = PALETTE_LIST[current_palette_index];
-                    last_palette_index = current_palette_index;
-                }
-            #endif
+        #ifndef ENABLE_BW_DITHER
+            static uint8_t last_palette_index = 0xFF;
+            uint8_t current_palette_index = get_selected_palette_index();
+            
+            if (current_palette_index != last_palette_index) {
+                gb_colors = PALETTE_LIST[current_palette_index];
+                last_palette_index = current_palette_index;
+            }
         #endif
         
         // Generate test pattern in screenBuffer (160x144 Game Boy size)
@@ -217,16 +223,17 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
 int main() {
     stdio_init_all();
     
+    // Initialize ADC for palette selection (both versions)
+    adc_init();
+    adc_gpio_init(PIN_PALETTE_ADC);
+    gpio_pull_up(PIN_PALETTE_ADC);  // Internal pull-up for stability without external resistor
+    adc_select_input(3);
+    
     #ifdef VERSION_V1_1a
         // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
         gpio_init(PIN_MODE_SWITCH);
         gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
         gpio_pull_down(PIN_MODE_SWITCH);
-        
-        // Initialize ADC for palette/brightness selection
-        adc_init();
-        adc_gpio_init(PIN_PALETTE_ADC);
-        adc_select_input(3);
     #endif
     
     // Display initialization
@@ -352,6 +359,19 @@ int main() {
         #endif
         
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
+        
+        #ifdef VERSION_V1_0
+            // Simple palette switching with trimmer (no mode button)
+            #ifndef ENABLE_BW_DITHER
+                static uint8_t last_palette_index = 0xFF;
+                uint8_t current_palette_index = get_selected_palette_index();
+                
+                if (current_palette_index != last_palette_index) {
+                    gb_colors = PALETTE_LIST[current_palette_index];
+                    last_palette_index = current_palette_index;
+                }
+            #endif
+        #endif
         
         #ifdef VERSION_V1_1a
 
