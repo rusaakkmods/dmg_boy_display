@@ -14,10 +14,11 @@
 #include "palettes.hpp"
 #include "displays/ili9341/ili9341.hpp"
 
-#define FIRMWARE_VERSION "v1.1a"
+//#define VERSION_V1_1a
+#define VERSION_V1_0
 
 // Configuration
-//#define ENABLE_DISPLAY_TEST
+#define ENABLE_DISPLAY_TEST
 //#define ENABLE_BW_DITHER  // Uncomment for black & white dithering
 
 // Dithering mode selection (only used if ENABLE_BW_DITHER is defined)
@@ -25,15 +26,25 @@
 //#define DITHER_BEST   // Floyd-Steinberg error diffusion (best quality)
 
 // Hardware Pin Definitions - v1.1a
-#define SPI_CHANNEL     spi0
-#define PIN_MOSI        3
-#define PIN_SCK         6
-#define PIN_CS          5
-#define PIN_DC          4
-#define PIN_RESET       7
-#define PIN_BL          8
-#define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
-#define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
+#ifdef VERSION_V1_1a
+    #define SPI_CHANNEL     spi0
+    #define PIN_MOSI        3
+    #define PIN_SCK         6
+    #define PIN_CS          5
+    #define PIN_DC          4
+    #define PIN_RESET       7
+    #define PIN_BL          8
+    #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
+    #define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
+#else // VERSION_V1_0
+    #define SPI_CHANNEL spi1
+    #define PIN_MOSI 11
+    #define PIN_SCK 10
+    #define PIN_CS 9
+    #define PIN_DC 12
+    #define PIN_RESET 13
+    #define PIN_BL 8
+#endif
 
 // Game Boy LCD Specifications
 #define DMG_W 160
@@ -57,7 +68,6 @@
 
 // Palette Configuration
 static const uint16_t* const PALETTE_LIST[] = {
-    PALETTE_MODERN,
     PALETTE_GRAYSCALE,
     PALETTE_GRAYSCALE_INVERT,
     PALETTE_GREEN_SHADES,
@@ -76,7 +86,8 @@ static const uint16_t* const PALETTE_LIST[] = {
     PALETTE_CLOUDY,
     PALETTE_LCD,
     PALETTE_SGB,
-    PALETTE_ADVENTURER
+    PALETTE_ADVENTURER,
+    PALETTE_MODERN
 };
 
 #define NUM_PALETTES (sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]))
@@ -125,21 +136,27 @@ void display_logo(ili9341::ILI9341& lcd) {
 }
 
 void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scaledBuf, int* xmap, int* ymap) {
-    gpio_init(2);
-    gpio_set_dir(2, GPIO_OUT);
+    int blink_io = 2;
+    #ifdef VERSION_V1_0
+        blink_io = 7;
+    #endif
+    gpio_init(blink_io);
+    gpio_set_dir(blink_io, GPIO_OUT);
 
     int pattern = 0;
     
     while (true) {
         // Check palette selection (only if not using BW dither)
-        #ifndef ENABLE_BW_DITHER
-            static uint8_t last_palette_index = 0xFF;
-            uint8_t current_palette_index = get_selected_palette_index();
-            
-            if (current_palette_index != last_palette_index) {
-                gb_colors = PALETTE_LIST[current_palette_index];
-                last_palette_index = current_palette_index;
-            }
+        #ifdef VERSION_V1_1a
+            #ifndef ENABLE_BW_DITHER
+                static uint8_t last_palette_index = 0xFF;
+                uint8_t current_palette_index = get_selected_palette_index();
+                
+                if (current_palette_index != last_palette_index) {
+                    gb_colors = PALETTE_LIST[current_palette_index];
+                    last_palette_index = current_palette_index;
+                }
+            #endif
         #endif
         
         // Generate test pattern in screenBuffer (160x144 Game Boy size)
@@ -190,7 +207,7 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
         lcd.clearScreen(FILL_COLOR);
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         
-        gpio_put(2, pattern % 2);
+        gpio_put(blink_io, pattern % 2);
         sleep_ms(1000);
         
         pattern = (pattern + 1) % 3;
@@ -200,15 +217,17 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
 int main() {
     stdio_init_all();
     
-    // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
-    gpio_init(PIN_MODE_SWITCH);
-    gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
-    gpio_pull_down(PIN_MODE_SWITCH);
-    
-    // Initialize ADC for palette/brightness selection
-    adc_init();
-    adc_gpio_init(PIN_PALETTE_ADC);
-    adc_select_input(3);
+    #ifdef VERSION_V1_1a
+        // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
+        gpio_init(PIN_MODE_SWITCH);
+        gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
+        gpio_pull_down(PIN_MODE_SWITCH);
+        
+        // Initialize ADC for palette/brightness selection
+        adc_init();
+        adc_gpio_init(PIN_PALETTE_ADC);
+        adc_select_input(3);
+    #endif
     
     // Display initialization
     ili9341::ILI9341 lcd;
@@ -334,58 +353,61 @@ int main() {
         
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         
-        // Check mode switch: LOW=brightness control, HIGH=palette selection
-        bool palette_mode = gpio_get(PIN_MODE_SWITCH);
-        
-        #ifndef ENABLE_BW_DITHER
-            static uint8_t last_palette_index = 0xFF;
-            static uint8_t last_palette_candidate = 0xFF;
-            static bool was_in_palette_mode = false;
+        #ifdef VERSION_V1_1a
+
+            // Check mode switch: LOW=brightness control, HIGH=palette selection
+            bool palette_mode = gpio_get(PIN_MODE_SWITCH);
+            
+            #ifndef ENABLE_BW_DITHER
+                static uint8_t last_palette_index = 0xFF;
+                static uint8_t last_palette_candidate = 0xFF;
+                static bool was_in_palette_mode = false;
+            #endif
+            
+            static uint8_t last_brightness_candidate = 0xFF;
+            static bool was_in_brightness_mode = false;
+            
+            if (palette_mode) {
+                // Palette selection mode (only if not using BW dither)
+                #ifndef ENABLE_BW_DITHER
+                    uint8_t current_palette_index = get_selected_palette_index();
+                    
+                    // If we just entered palette mode, store current candidate
+                    if (!was_in_palette_mode) {
+                        last_palette_candidate = current_palette_index;
+                        was_in_palette_mode = true;
+                    }
+                    
+                    // Only change palette if pot value has changed while in palette mode
+                    if (current_palette_index != last_palette_candidate) {
+                        gb_colors = PALETTE_LIST[current_palette_index];
+                        last_palette_index = current_palette_index;
+                        last_palette_candidate = current_palette_index;
+                    }
+                #endif
+                
+                was_in_brightness_mode = false;
+            } else {
+                // Brightness control mode
+                #ifndef ENABLE_BW_DITHER
+                    was_in_palette_mode = false;
+                #endif
+                
+                uint8_t current_brightness = get_brightness_from_adc();
+                
+                // If we just entered brightness mode, store current candidate
+                if (!was_in_brightness_mode) {
+                    last_brightness_candidate = current_brightness;
+                    was_in_brightness_mode = true;
+                }
+                
+                // Only change brightness if pot value has changed while in brightness mode
+                if (current_brightness != last_brightness_candidate) {
+                    lcd.setBrightness(current_brightness);
+                    last_brightness_candidate = current_brightness;
+                }
+            }
         #endif
-        
-        static uint8_t last_brightness_candidate = 0xFF;
-        static bool was_in_brightness_mode = false;
-        
-        if (palette_mode) {
-            // Palette selection mode (only if not using BW dither)
-            #ifndef ENABLE_BW_DITHER
-                uint8_t current_palette_index = get_selected_palette_index();
-                
-                // If we just entered palette mode, store current candidate
-                if (!was_in_palette_mode) {
-                    last_palette_candidate = current_palette_index;
-                    was_in_palette_mode = true;
-                }
-                
-                // Only change palette if pot value has changed while in palette mode
-                if (current_palette_index != last_palette_candidate) {
-                    gb_colors = PALETTE_LIST[current_palette_index];
-                    last_palette_index = current_palette_index;
-                    last_palette_candidate = current_palette_index;
-                }
-            #endif
-            
-            was_in_brightness_mode = false;
-        } else {
-            // Brightness control mode
-            #ifndef ENABLE_BW_DITHER
-                was_in_palette_mode = false;
-            #endif
-            
-            uint8_t current_brightness = get_brightness_from_adc();
-            
-            // If we just entered brightness mode, store current candidate
-            if (!was_in_brightness_mode) {
-                last_brightness_candidate = current_brightness;
-                was_in_brightness_mode = true;
-            }
-            
-            // Only change brightness if pot value has changed while in brightness mode
-            if (current_brightness != last_brightness_candidate) {
-                lcd.setBrightness(current_brightness);
-                last_brightness_candidate = current_brightness;
-            }
-        }
         
         vSyncFallingEdgeDetected = false;
     }
