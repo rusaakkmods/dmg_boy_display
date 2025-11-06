@@ -20,6 +20,7 @@
 // Configuration
 #define ENABLE_DISPLAY_TEST
 //#define ENABLE_BW_DITHER  // Uncomment for black & white dithering
+//#define DISABLE_PALETTE_SELECTION  // For v1.0: Uncomment to use fixed palette (saves GPIO 29)
 
 // Dithering mode selection (only used if ENABLE_BW_DITHER is defined)
 #define DITHER_FAST   // Bayer dithering (fastest)
@@ -63,32 +64,32 @@
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
 // LCD SPI Configuration
-#define LCD_SPI_SPEED   (40 * 1000 * 1000)
+#define LCD_SPI_SPEED   (62.5 * 1000 * 1000)
 #define LCD_DMA_BUFFER  2560
 #define LCD_BRIGHTNESS  128  // 50% brightness
 
 // Palette Configuration
 static const uint16_t* const PALETTE_LIST[] = {
-    PALETTE_GRAYSCALE,
-    PALETTE_GRAYSCALE_INVERT,
-    PALETTE_GREEN_SHADES,
-    PALETTE_YELLOW_SHADES,
-    PALETTE_TEAL_SHADES,
-    PALETTE_RED_PASTEL_SHADES,
-    PALETTE_GRAY_SHADES,
-    PALETTE_RETRO,
-    PALETTE_ROMANCE,
-    PALETTE_MODERN2,
-    PALETTE_PEACH,
-    PALETTE_NEON,
-    PALETTE_HIGHLIGHT_BLUE,
-    PALETTE_BLUE_HUE,
-    PALETTE_VINTAGE,
-    PALETTE_CLOUDY,
-    PALETTE_LCD,
-    PALETTE_SGB,
+    PALETTE_MODERN,
     PALETTE_ADVENTURER,
-    PALETTE_MODERN
+    PALETTE_SGB,
+    PALETTE_LCD,
+    PALETTE_CLOUDY,
+    PALETTE_VINTAGE,
+    PALETTE_BLUE_HUE,
+    PALETTE_HIGHLIGHT_BLUE,
+    PALETTE_NEON,
+    PALETTE_PEACH,
+    PALETTE_MODERN2,
+    PALETTE_ROMANCE,
+    PALETTE_RETRO,
+    PALETTE_GRAY_SHADES,
+    PALETTE_RED_PASTEL_SHADES,
+    PALETTE_TEAL_SHADES,
+    PALETTE_YELLOW_SHADES,
+    PALETTE_GREEN_SHADES,
+    PALETTE_GRAYSCALE_INVERT,
+    PALETTE_GRAYSCALE
 };
 
 #define NUM_PALETTES (sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]))
@@ -104,7 +105,7 @@ static const uint16_t* const PALETTE_LIST[] = {
         static const uint16_t gb_colors[4] = {0xFFFF, 0x9999, 0x5555, 0x0000};
     #endif
 #else
-    static const uint16_t* gb_colors = PALETTE_MODERN;
+    static const uint16_t* gb_colors = PALETTE_GRAYSCALE;
 #endif
 
 uint8_t get_selected_palette_index() {
@@ -154,15 +155,41 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
     int pattern = 0;
     
     while (true) {
-        // Check palette selection (only if not using BW dither)
+        // Check palette and brightness controls (only if not using BW dither)
         #ifndef ENABLE_BW_DITHER
-            static uint8_t last_palette_index = 0xFF;
-            uint8_t current_palette_index = get_selected_palette_index();
-            
-            if (current_palette_index != last_palette_index) {
-                gb_colors = PALETTE_LIST[current_palette_index];
-                last_palette_index = current_palette_index;
-            }
+            #ifdef VERSION_V1_1a
+                // v1.1a: Mode switch controls palette vs brightness
+                bool palette_mode = gpio_get(PIN_MODE_SWITCH);
+                static uint8_t last_palette_index = 0xFF;
+                static uint8_t last_brightness = 0xFF;
+                
+                if (palette_mode) {
+                    // Palette selection mode
+                    uint8_t current_palette_index = get_selected_palette_index();
+                    if (current_palette_index != last_palette_index) {
+                        gb_colors = PALETTE_LIST[current_palette_index];
+                        last_palette_index = current_palette_index;
+                    }
+                } else {
+                    // Brightness control mode
+                    uint8_t current_brightness = get_brightness_from_adc();
+                    if (current_brightness != last_brightness) {
+                        apply_brightness(lcd, current_brightness);
+                        last_brightness = current_brightness;
+                    }
+                }
+            #else
+                // v1.0: Direct palette control with trimmer (if enabled)
+                #ifndef DISABLE_PALETTE_SELECTION
+                    static uint8_t last_palette_index = 0xFF;
+                    uint8_t current_palette_index = get_selected_palette_index();
+                    
+                    if (current_palette_index != last_palette_index) {
+                        gb_colors = PALETTE_LIST[current_palette_index];
+                        last_palette_index = current_palette_index;
+                    }
+                #endif
+            #endif
         #endif
         
         // Generate test pattern in screenBuffer (160x144 Game Boy size)
@@ -220,20 +247,46 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
     }
 }
 
+// Backlight control wrapper: for v1.0 use simple on/off; for v1.1a use PWM via driver
+static inline void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
+#ifdef VERSION_V1_0
+    // Binary control: treat any value above midpoint as ON, else OFF
+    const uint8_t THRESH = 64; // threshold (approx 25% of 255, but our range is 5-128)
+    // PIN_BL already initialized as GPIO during setup, just control it
+    if (brightness > THRESH) {
+        gpio_put(PIN_BL, 1);  // ON
+    } else {
+        gpio_put(PIN_BL, 0);  // OFF
+    }
+#else
+    // Use driver's PWM/brightness control
+    lcd.setBrightness(brightness);
+#endif
+}
+
 int main() {
     stdio_init_all();
     
-    // Initialize ADC for palette selection (both versions)
-    adc_init();
-    adc_gpio_init(PIN_PALETTE_ADC);
-    gpio_pull_up(PIN_PALETTE_ADC);  // Internal pull-up for stability without external resistor
-    adc_select_input(3);
+    #ifndef DISABLE_PALETTE_SELECTION
+        // Initialize ADC for palette selection (both versions)
+        adc_init();
+        adc_gpio_init(PIN_PALETTE_ADC);
+        gpio_pull_up(PIN_PALETTE_ADC);  // Internal pull-up for stability without external resistor
+        adc_select_input(3);
+    #endif
     
     #ifdef VERSION_V1_1a
         // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
         gpio_init(PIN_MODE_SWITCH);
         gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
         gpio_pull_down(PIN_MODE_SWITCH);
+    #endif
+    
+    #ifdef VERSION_V1_0
+        // For v1.0: Initialize backlight as GPIO off, will turn on after logo
+        gpio_init(PIN_BL);
+        gpio_set_dir(PIN_BL, GPIO_OUT);
+        gpio_put(PIN_BL, 0);  // Start with backlight OFF
     #endif
     
     // Display initialization
@@ -251,7 +304,11 @@ int main() {
     config.pin_cs = PIN_CS;
     config.pin_dc = PIN_DC;
     config.pin_reset = PIN_RESET;
-    config.pin_bl = PIN_BL;
+    #ifdef VERSION_V1_0
+        config.pin_bl = -1;  // Disable PWM control for v1.0, we handle it manually
+    #else
+        config.pin_bl = PIN_BL;  // v1.1a uses PWM via driver
+    #endif
     config.rotation = DISPLAY_ROTATION;
     
     lcd.begin(config);
@@ -260,7 +317,13 @@ int main() {
     display_logo(lcd);
     sleep_ms(100); /// wait for a moment before setting brightness
 
-    lcd.setBrightness(LCD_BRIGHTNESS);
+    #ifdef VERSION_V1_0
+        // Smooth turn-on: delay a bit after logo, then turn on backlight
+        sleep_ms(50);
+        gpio_put(PIN_BL, 1);  // Turn backlight ON
+    #endif
+    
+    apply_brightness(lcd, LCD_BRIGHTNESS);
     sleep_ms(900);
 
     // Buffer allocation
@@ -362,7 +425,7 @@ int main() {
         
         #ifdef VERSION_V1_0
             // Simple palette switching with trimmer (no mode button)
-            #ifndef ENABLE_BW_DITHER
+            #if !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
                 static uint8_t last_palette_index = 0xFF;
                 uint8_t current_palette_index = get_selected_palette_index();
                 
@@ -423,7 +486,7 @@ int main() {
                 
                 // Only change brightness if pot value has changed while in brightness mode
                 if (current_brightness != last_brightness_candidate) {
-                    lcd.setBrightness(current_brightness);
+                    apply_brightness(lcd, current_brightness);
                     last_brightness_candidate = current_brightness;
                 }
             }
