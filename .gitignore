@@ -1,5 +1,7 @@
 # CMake build directories and files
 build/
+build_device/
+documents/
 releases/
 cmake-build-*/
 CMakeCache.txt

@@ -1,0 +1,126 @@
+#pragma once
+
+#include <stdint.h>
+#include "config.h"
+#include "displays/ili9341/ili9341.hpp"
+
+// Forward declarations
+extern const uint16_t* gb_colors;
+
+/**
+ * ADC and Input Functions
+ */
+
+/**
+ * Get the selected palette index from ADC reading
+ * Uses oversampling to reduce noise
+ * @return Palette index (0 to NUM_PALETTES-1)
+ */
+uint8_t get_selected_palette_index();
+
+/**
+ * Get brightness value from ADC reading
+ * Maps ADC range to brightness range
+ * @return Brightness value (BRIGHTNESS_MIN to BRIGHTNESS_MAX)
+ */
+uint8_t get_brightness_from_adc();
+
+/**
+ * Display Control Functions
+ */
+
+/**
+ * Apply brightness control - handles both v1.0 and v1.1a hardware differences
+ * @param lcd LCD display instance
+ * @param brightness Brightness value to apply
+ */
+void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness);
+
+/**
+ * Display the logo screen
+ * @param lcd LCD display instance
+ */
+void display_logo(ili9341::ILI9341& lcd);
+
+/**
+ * Display test patterns (for ENABLE_DISPLAY_TEST mode)
+ * @param lcd LCD display instance
+ * @param screenBuffer Game Boy sized buffer (160x144)
+ * @param scaledBuf Scaled display buffer
+ * @param xmap X-axis scaling map
+ * @param ymap Y-axis scaling map
+ */
+void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scaledBuf, int* xmap, int* ymap);
+
+/**
+ * Hardware Initialization Functions  
+ */
+
+/**
+ * Initialize ADC for palette/brightness selection
+ */
+void init_adc();
+
+/**
+ * Initialize GPIO pins for the specific hardware version
+ */
+void init_gpio();
+
+/**
+ * Initialize and configure the LCD display
+ * @param lcd LCD display instance
+ * @return Configured LCD config structure
+ */
+ili9341::Config init_lcd_config();
+
+/**
+ * Palette and Color Management
+ */
+
+/**
+ * Update hardware controls (palette and brightness) for both hardware versions
+ * v1.0: Simple palette control via trimmer
+ * v1.1a: Advanced mode-switched palette/brightness control
+ * @param lcd LCD display instance
+ */
+void update_hardware_controls(ili9341::ILI9341& lcd);
+
+/**
+ * Frame Processing Functions
+ */
+
+/**
+ * Scale a frame from Game Boy resolution to display resolution
+ * @param screenBuffer Source buffer (160x144)
+ * @param scaledBuf Destination buffer (scaled size)
+ * @param xmap X-axis scaling map
+ * @param ymap Y-axis scaling map
+ */
+void scale_frame(const uint16_t* screenBuffer, uint16_t* scaledBuf, const int* xmap, const int* ymap);
+
+/**
+ * Apply dithering to the scaled buffer if enabled
+ * @param scaledBuf Buffer to apply dithering to
+ */
+void apply_dithering(uint16_t* scaledBuf);
+
+/**
+ * Test Pattern Generation
+ */
+
+/**
+ * Generate a test pattern in the screen buffer
+ * @param screenBuffer Buffer to fill with test pattern
+ * @param pattern Pattern type (0=horizontal gradient, 1=vertical gradient, 2=checkerboard)
+ */
+void generate_test_pattern(uint16_t* screenBuffer, int pattern);
+
+/**
+ * Utility Functions
+ */
+
+/**
+ * Get the blink GPIO pin for the current hardware version
+ * @return GPIO pin number for status LED
+ */
+uint8_t get_blink_pin();

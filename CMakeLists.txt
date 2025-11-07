@@ -33,9 +33,21 @@ project(dmg_boy_display C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
+# Build configuration options
+option(ENABLE_DISPLAY_TEST "Enable display test mode instead of Game Boy capture" OFF)
+option(ENABLE_BW_DITHER "Enable black & white dithering" OFF)
+option(DISABLE_PALETTE_SELECTION "Disable palette selection (saves GPIO 29)" OFF)
 
-add_executable(dmg_boy_display
+# Dither mode selection (only used if ENABLE_BW_DITHER is ON)
+set(DITHER_MODE "FAST" CACHE STRING "Dithering algorithm: FAST or BEST")
+set_property(CACHE DITHER_MODE PROPERTY STRINGS "FAST" "BEST")
+
+# SPI speed selection
+set(SPI_SPEED "62.5" CACHE STRING "SPI clock speed in MHz: 40 or 62.5")
+set_property(CACHE SPI_SPEED PROPERTY STRINGS "40" "62.5")
+
+# Common source files for both variants
+set(COMMON_SOURCES
     main.cpp
     src/displays/st7789/st7789.cpp
     src/displays/st7789/st7789_hal.cpp
@@ -55,35 +67,71 @@ add_executable(dmg_boy_display
     src/displays/sh1107/sh1107_gfx.cpp
     src/dither.cpp
     src/scaler.cpp
+    src/helpers.cpp
+    src/palettes.cpp
 )
 
-# Generate PIO header
-pico_generate_pio_header(dmg_boy_display ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
+# Function to apply common build options to a target
+function(apply_build_options target_name)
+    # Apply optional feature flags
+    if(ENABLE_DISPLAY_TEST)
+        target_compile_definitions(${target_name} PRIVATE ENABLE_DISPLAY_TEST)
+    endif()
+    
+    if(ENABLE_BW_DITHER)
+        target_compile_definitions(${target_name} PRIVATE ENABLE_BW_DITHER)
+        if(DITHER_MODE STREQUAL "BEST")
+            target_compile_definitions(${target_name} PRIVATE DITHER_BEST)
+        else()
+            target_compile_definitions(${target_name} PRIVATE DITHER_FAST)
+        endif()
+    endif()
+    
+    if(DISABLE_PALETTE_SELECTION)
+        target_compile_definitions(${target_name} PRIVATE DISABLE_PALETTE_SELECTION)
+    endif()
+    
+    # SPI speed configuration
+    if(SPI_SPEED STREQUAL "40")
+        target_compile_definitions(${target_name} PRIVATE SPI_SPEED_40MHZ)
+    else()
+        target_compile_definitions(${target_name} PRIVATE SPI_SPEED_62_5MHZ)
+    endif()
+endfunction()
 
-pico_set_program_name(dmg_boy_display "dmg_boy_display")
-pico_set_program_version(dmg_boy_display "1.0.0")
+# Build v1.1a variant
+add_executable(dmg_boy_display_v1_1a ${COMMON_SOURCES})
+target_compile_definitions(dmg_boy_display_v1_1a PRIVATE VERSION_V1_1a)
+apply_build_options(dmg_boy_display_v1_1a)
 
-# Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(dmg_boy_display 0)
-pico_enable_stdio_usb(dmg_boy_display 0)
+# Build v1.0 variant  
+add_executable(dmg_boy_display_v1_0 ${COMMON_SOURCES})
+target_compile_definitions(dmg_boy_display_v1_0 PRIVATE VERSION_V1_0)
+apply_build_options(dmg_boy_display_v1_0)
 
-# Include directories
-target_include_directories(dmg_boy_display PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/include
+# Configure v1.1a variant
+pico_generate_pio_header(dmg_boy_display_v1_1a ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
+pico_set_program_name(dmg_boy_display_v1_1a "dmg_boy_display_v1.1a")
+pico_set_program_version(dmg_boy_display_v1_1a "1.1.0")
+pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
+pico_enable_stdio_usb(dmg_boy_display_v1_1a 0)
+target_include_directories(dmg_boy_display_v1_1a PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(dmg_boy_display_v1_1a
+    pico_stdlib hardware_spi hardware_gpio hardware_dma hardware_pio 
+    hardware_pwm hardware_i2c hardware_adc hardware_watchdog
 )
+pico_add_extra_outputs(dmg_boy_display_v1_1a)
 
-# Link libraries
-target_link_libraries(dmg_boy_display
-    pico_stdlib
-    hardware_spi
-    hardware_gpio
-    hardware_dma
-    hardware_pio
-    hardware_pwm
-    hardware_i2c
-    hardware_adc
-    hardware_watchdog
+# Configure v1.0 variant
+pico_generate_pio_header(dmg_boy_display_v1_0 ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
+pico_set_program_name(dmg_boy_display_v1_0 "dmg_boy_display_v1.0")
+pico_set_program_version(dmg_boy_display_v1_0 "1.0.0")
+pico_enable_stdio_uart(dmg_boy_display_v1_0 0)
+pico_enable_stdio_usb(dmg_boy_display_v1_0 0)
+target_include_directories(dmg_boy_display_v1_0 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(dmg_boy_display_v1_0
+    pico_stdlib hardware_spi hardware_gpio hardware_dma hardware_pio 
+    hardware_pwm hardware_i2c hardware_adc hardware_watchdog
 )
-
-pico_add_extra_outputs(dmg_boy_display)
+pico_add_extra_outputs(dmg_boy_display_v1_0)
 

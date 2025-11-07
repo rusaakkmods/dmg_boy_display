@@ -71,19 +71,34 @@ Game Boy LCD → PIO State Machine → CPU Processing → External Display
 ## Usage
 
 ### Hardware Connections
-Connect the following Game Boy signals to Raspberry Pi Pico GPIO pins:
 
+**Important**: This project supports two hardware versions with different GPIO assignments:
+
+#### Hardware Version v1.0 (Legacy)
 ```cpp
-// Pin assignments - PIO uses pin indices starting from GPIO 2
-#define GB_CLK_PIN    2   // Game Boy pixel clock (CPG) - PIO pin index 0
-#define GB_DATA0_PIN  3   // Game Boy data bit 0 (LD0) - PIO pin index 1
-#define GB_DATA1_PIN  4   // Game Boy data bit 1 (LD1) - PIO pin index 2  
-#define GB_VSYNC_PIN  5   // Game Boy vertical sync (VSYNC) - PIO pin index 3
-
-// PIO configuration maps pin indices to GPIO pins:
-// sm_config_set_in_pins(&config, 2) sets GPIO 2 as PIO pin index 0
-// This automatically assigns GPIO 3,4,5 to PIO pin indices 1,2,3
+#define GB_PIN_BASE   2   // PIO input base pin
+// Game Boy connections:
+// GPIO 2 (PIO pin 0): Game Boy pixel clock (CPG)
+// GPIO 3 (PIO pin 1): Game Boy data bit 0 (LD0)  
+// GPIO 4 (PIO pin 2): Game Boy data bit 1 (LD1)
+// GPIO 5 (PIO pin 3): Game Boy vertical sync (VSYNC)
 ```
+
+#### Hardware Version v1.1a (Current)
+```cpp
+#define GB_PIN_BASE   9   // PIO input base pin  
+// Game Boy connections:
+// GPIO 9 (PIO pin 0): Game Boy pixel clock (CPG)
+// GPIO 10 (PIO pin 1): Game Boy data bit 0 (LD0)
+// GPIO 11 (PIO pin 2): Game Boy data bit 1 (LD1)  
+// GPIO 12 (PIO pin 3): Game Boy vertical sync (VSYNC)
+```
+
+#### PIO Configuration Notes
+The PIO program uses consecutive GPIO pins starting from `GB_PIN_BASE`:
+- PIO automatically assigns 4 consecutive GPIO pins as input pins
+- Pin assignment is set via `gblcd_program_init(pio, sm, offset, GB_PIN_BASE)`
+- The base pin configuration is defined in `config.h` based on hardware version
 
 ### Software Integration
 
@@ -91,10 +106,17 @@ The PIO program is automatically compiled and included in your project:
 
 ```cpp
 #include "gblcd.pio.h"
+#include "config.h"
 
-// Initialize PIO program
-uint offset = pio_add_program(pio0, &gblcd_program);
-gblcd_program_init(pio0, 0, offset, clk_pin, data_pin);
+// Initialize PIO program with hardware-specific pin configuration
+PIO pio = pio0;
+uint state_machine_id = 0;
+uint offset = pio_add_program(pio, &gblcd_program);
+gblcd_program_init(pio, state_machine_id, offset, GB_PIN_BASE);
+
+// GB_PIN_BASE is defined in config.h:
+// - v1.0 hardware: GB_PIN_BASE = 2 (GPIO 2-5)
+// - v1.1a hardware: GB_PIN_BASE = 9 (GPIO 9-12)
 ```
 
 ## Performance Features
@@ -113,6 +135,31 @@ This library enables various Game Boy LCD capture applications:
 - Game Boy video recording systems
 - Real-time streaming solutions
 - Emulator development and testing
+
+## Hardware Version Support
+
+This PIO program supports two hardware configurations:
+
+### Version v1.0 (Legacy)
+- **GPIO Assignment**: 2-5 (sequential from GPIO 2)
+- **SPI Interface**: SPI1 (GPIO 9-13 for display)
+- **Features**: Basic Game Boy capture with manual brightness control
+- **Pin Conflicts**: None between Game Boy capture and display SPI
+
+### Version v1.1a (Current)  
+- **GPIO Assignment**: 9-12 (sequential from GPIO 9)
+- **SPI Interface**: SPI0 (GPIO 3-7 for display)
+- **Features**: Advanced controls with mode switching (palette/brightness)
+- **Improvements**: Better pin separation, enhanced control interface
+
+### Migration Notes
+When upgrading hardware from v1.0 to v1.1a:
+1. Update `GB_PIN_BASE` in config.h (2 → 9)
+2. Rewire Game Boy capture signals to new GPIO pins
+3. Update display SPI connections for SPI0 interface
+4. Build firmware with `-DVERSION_V1_1a` flag
+
+The PIO program automatically adapts to the configured pin assignment through the `GB_PIN_BASE` parameter.
 
 ## Technical Notes
 
