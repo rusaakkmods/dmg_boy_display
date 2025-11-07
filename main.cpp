@@ -21,6 +21,7 @@ int main() {
     ili9341::Config config = init_lcd_config();
     
     lcd.begin(config);
+    lcd.setRotation(config.rotation); //need to call this again here for correct orientation
 
     display_logo(lcd);
     sleep_ms(LOGO_DISPLAY_DELAY_MS);
