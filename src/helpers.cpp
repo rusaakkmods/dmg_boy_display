@@ -153,7 +153,6 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
         #ifndef ENABLE_BW_DITHER
             uint8_t current_palette_index = get_selected_palette_index();
             
-            // If we just entered palette mode, store current candidate
             if (!was_in_palette_mode) {
                 last_palette_candidate = current_palette_index;
                 was_in_palette_mode = true;
@@ -232,23 +231,72 @@ void apply_dithering(uint16_t* scaledBuf) {
 
 // Test Pattern Generation
 void generate_test_pattern(uint16_t* screenBuffer, int pattern) {
+    // Standard RGB565 colors for test patterns
+    static const uint16_t RED = 0xF800;      // Pure red
+    static const uint16_t GREEN = 0x07E0;    // Pure green  
+    static const uint16_t BLUE = 0x001F;     // Pure blue
+    static const uint16_t YELLOW = 0xFFE0;   // Yellow (red + green)
+    static const uint16_t WHITE = 0xFFFF;    // White
+    static const uint16_t BLACK = 0x0000;    // Black
+    
+    bool use_palette = (pattern % 2 == 0);
+    int base_pattern = pattern / 2;
+    
     for (int y = 0; y < DMG_H; y++) {
         for (int x = 0; x < DMG_W; x++) {
-            uint8_t pixel_value = 0;
+            uint16_t color = BLACK;
             
-            if (pattern == 0) {
+            if (base_pattern == 0) {
                 // Horizontal gradient
-                pixel_value = (x * 4) / DMG_W;
-            } else if (pattern == 1) {
-                // Vertical gradient  
-                pixel_value = (y * 4) / DMG_H;
-            } else {
+                if (use_palette) {
+                    uint8_t pixel_value = (x * 4) / DMG_W;
+                    if (pixel_value > 3) pixel_value = 3;
+                    color = gb_colors[pixel_value];
+                } else {
+                    // RGB horizontal gradient
+                    int stripe_width = DMG_W / 4;
+                    if (x < stripe_width) color = RED;
+                    else if (x < stripe_width * 2) color = GREEN;
+                    else if (x < stripe_width * 3) color = BLUE;
+                    else color = YELLOW;
+                }
+            } else if (base_pattern == 1) {
+                // Vertical gradient/bars
+                if (use_palette) {
+                    uint8_t pixel_value = (y * 4) / DMG_H;
+                    if (pixel_value > 3) pixel_value = 3;
+                    color = gb_colors[pixel_value];
+                } else {
+                    // RGB vertical bars
+                    int stripe_height = DMG_H / 4;
+                    if (y < stripe_height) color = RED;
+                    else if (y < stripe_height * 2) color = GREEN;
+                    else if (y < stripe_height * 3) color = BLUE;
+                    else color = YELLOW;
+                }
+            } else if (base_pattern == 2) {
                 // Checkerboard
-                pixel_value = ((x / 40) + (y / 36)) % 4;
+                if (use_palette) {
+                    uint8_t pixel_value = ((x / 40) + (y / 36)) % 4;
+                    if (pixel_value > 3) pixel_value = 3;
+                    color = gb_colors[pixel_value];
+                } else {
+                    // RGB checkerboard
+                    int block_size = 20;
+                    bool checker = ((x / block_size) + (y / block_size)) % 2;
+                    int color_index = ((x / block_size) + (y / block_size * 2)) % 4;
+                    if (checker) {
+                        if (color_index == 0) color = RED;
+                        else if (color_index == 1) color = GREEN;
+                        else if (color_index == 2) color = BLUE;
+                        else color = YELLOW;
+                    } else {
+                        color = WHITE;
+                    }
+                }
             }
             
-            if (pixel_value > 3) pixel_value = 3;
-            screenBuffer[y * DMG_W + x] = gb_colors[pixel_value];
+            screenBuffer[y * DMG_W + x] = color;
         }
     }
 }
@@ -306,16 +354,12 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
             #endif
         #endif
         
-        // Generate test pattern
         generate_test_pattern(screenBuffer, pattern);
         
-        // Scale the pattern
         scale_frame(screenBuffer, scaledBuf, xmap, ymap);
         
-        // Apply dithering if enabled
         apply_dithering(scaledBuf);
         
-        // Draw to LCD
         lcd.clearScreen(FILL_COLOR);
         lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         

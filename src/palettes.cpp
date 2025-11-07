@@ -1,7 +1,6 @@
 #include "palettes.hpp"
 #include "config.h"
 
-// Palette list in order of preference
 const uint16_t* const PALETTE_LIST[] = {
     MODERN,
     ADVENTURER,
@@ -27,7 +26,6 @@ const uint16_t* const PALETTE_LIST[] = {
 
 const size_t NUM_PALETTES = sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]);
 
-// Dither configuration
 #ifdef ENABLE_BW_DITHER
     const uint16_t BW_BLACK = 0x0000;
     const uint16_t BW_WHITE = 0xFFFF;

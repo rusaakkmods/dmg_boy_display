@@ -90,7 +90,7 @@ extern const size_t NUM_PALETTES;
 #define TEST_BLINK_IO_V1_1A 2
 #define TEST_BLINK_IO_V1_0  7
 #define TEST_PATTERN_DELAY_MS 1000
-#define NUM_TEST_PATTERNS 3
+#define NUM_TEST_PATTERNS 6
 
 // ADC Configuration
 #define ADC_OVERSAMPLE_COUNT 8
