@@ -14,11 +14,11 @@
 #include "palettes.hpp"
 #include "displays/ili9341/ili9341.hpp"
 
-//#define VERSION_V1_1a
-#define VERSION_V1_0
+#define VERSION_V1_1a
+//#define VERSION_V1_0
 
 // Configuration
-#define ENABLE_DISPLAY_TEST
+//#define ENABLE_DISPLAY_TEST
 //#define ENABLE_BW_DITHER  // Uncomment for black & white dithering
 //#define DISABLE_PALETTE_SELECTION  // For v1.0: Uncomment to use fixed palette (saves GPIO 29)
 
@@ -37,6 +37,7 @@
     #define PIN_BL          8
     #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
     #define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
+    #define GB_PIN_BASE     9
 #else // VERSION_V1_0
     #define SPI_CHANNEL spi1
     #define PIN_MOSI 11
@@ -46,6 +47,7 @@
     #define PIN_RESET 13
     #define PIN_BL 8
     #define PIN_PALETTE_ADC 29  // ADC3 - 10K trimmer for palette selection
+    #define GB_PIN_BASE 2
 #endif
 
 // Game Boy LCD Specifications
@@ -131,6 +133,23 @@ uint8_t get_brightness_from_adc() {
     // Map 0-4095 to 5-128 (very dim to 50% max)
     uint8_t brightness = 5 + ((adc_value * 123) / 4096);
     return brightness;
+}
+
+// Backlight control wrapper: for v1.0 use simple on/off; for v1.1a use PWM via driver
+static inline void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
+#ifdef VERSION_V1_0
+    // Binary control: treat any value above midpoint as ON, else OFF
+    const uint8_t THRESH = 64; // threshold (approx 25% of 255, but our range is 5-128)
+    // PIN_BL already initialized as GPIO during setup, just control it
+    if (brightness > THRESH) {
+        gpio_put(PIN_BL, 1);  // ON
+    } else {
+        gpio_put(PIN_BL, 0);  // OFF
+    }
+#else
+    // Use driver's PWM/brightness control
+    lcd.setBrightness(brightness);
+#endif
 }
 
 void display_logo(ili9341::ILI9341& lcd) {
@@ -247,23 +266,6 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
     }
 }
 
-// Backlight control wrapper: for v1.0 use simple on/off; for v1.1a use PWM via driver
-static inline void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
-#ifdef VERSION_V1_0
-    // Binary control: treat any value above midpoint as ON, else OFF
-    const uint8_t THRESH = 64; // threshold (approx 25% of 255, but our range is 5-128)
-    // PIN_BL already initialized as GPIO during setup, just control it
-    if (brightness > THRESH) {
-        gpio_put(PIN_BL, 1);  // ON
-    } else {
-        gpio_put(PIN_BL, 0);  // OFF
-    }
-#else
-    // Use driver's PWM/brightness control
-    lcd.setBrightness(brightness);
-#endif
-}
-
 int main() {
     stdio_init_all();
     
@@ -341,7 +343,7 @@ int main() {
     PIO pio = pio0;
     uint state_machine_id = 0;
     uint offset = pio_add_program(pio, &gblcd_program);
-    gblcd_program_init(pio, state_machine_id, offset);
+    gblcd_program_init(pio, state_machine_id, offset, GB_PIN_BASE);
 
     // Main loop variables
     int x = 0, y = 0;
