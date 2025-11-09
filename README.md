@@ -1,10 +1,27 @@
-# DMG Boy Display - Build Configuration Guide
+# rMODS DMG Boy Display
 
-## Build Variants
+A high-performance Game Boy LCD capture and display system using the Raspberry Pi Pico.
 
-The project now builds **two hardware variants** automatically:
+## 🚨 Important: Hardware Version Compatibility
+
+This project supports **two different hardware board versions** with different pin assignments. Using the wrong firmware will cause display issues or complete malfunction.
+
+### Quick Hardware Identification
+
+| Version | Game Boy Capture Pins | Display SPI | Controls |
+|---------|----------------------|-------------|----------|
+| **v1.0** | GPIO 2-5 | SPI1 (GPIO 9-13) | Single potentiometer |
+| **v1.1a** | GPIO 9-12 | SPI0 (GPIO 3-7) | Potentiometer + Mode switch |
+
+📋 **[Complete Hardware Guide](boards/README.md)** - Detailed board identification, pin assignments, and troubleshooting
+
+### Firmware Files
+
+The build system automatically generates firmware for both hardware versions:
 - `dmg_boy_display_v1_0.uf2` - For v1.0 hardware
 - `dmg_boy_display_v1_1a.uf2` - For v1.1a hardware
+
+⚠️ **Always use the firmware that matches your hardware version!**
 
 ## Configuration Options
 
@@ -215,6 +232,14 @@ build_all.bat --help                    # Show all options
 ```
 
 ### Troubleshooting Display Issues
+
+#### Wrong Hardware/Firmware Combination
+**Symptoms**: Display shows garbage, wrong rotation, controls don't work
+**Solution**: 
+1. Check your hardware version using the [Hardware Guide](boards/README.md)
+2. Flash the correct firmware file for your board
+
+#### Display Artifacts/Performance Issues
 If you experience display corruption, flickering, or other visual artifacts:
 
 1. **Try stable SPI speed first**:
@@ -231,5 +256,10 @@ If you experience display corruption, flickering, or other visual artifacts:
    ```bash
    ./build_all.sh --spi-40 --test
    ```
+
+## Documentation
+
+- 📋 **[Hardware Guide](boards/README.md)** - Board versions, pin assignments, hardware identification
+- 🎯 **[PIO Documentation](pio/gblcd/README.md)** - Game Boy capture implementation details
 
 The build system automatically handles all source file compilation and creates both hardware variants with the selected options.
