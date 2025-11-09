@@ -46,6 +46,10 @@ set_property(CACHE DITHER_MODE PROPERTY STRINGS "FAST" "BEST")
 set(SPI_SPEED "62.5" CACHE STRING "SPI clock speed in MHz: 40 or 62.5")
 set_property(CACHE SPI_SPEED PROPERTY STRINGS "40" "62.5")
 
+# Display offset adjustments (relative to base values: X_BASE=47, Y_BASE=2)
+set(OFFSET_X_ADJUST "0" CACHE STRING "X offset adjustment from base (47): -47 to +273")
+set(OFFSET_Y_ADJUST "0" CACHE STRING "Y offset adjustment from base (2): -2 to +238")
+
 # Common source files for both variants
 set(COMMON_SOURCES
     main.cpp
@@ -97,6 +101,10 @@ function(apply_build_options target_name)
     else()
         target_compile_definitions(${target_name} PRIVATE SPI_SPEED_62_5MHZ)
     endif()
+    
+    # Display offset configuration
+    target_compile_definitions(${target_name} PRIVATE OFFSET_X_ADJUST=${OFFSET_X_ADJUST})
+    target_compile_definitions(${target_name} PRIVATE OFFSET_Y_ADJUST=${OFFSET_Y_ADJUST})
 endfunction()
 
 # Build v1.1a variant

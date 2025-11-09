@@ -13,6 +13,8 @@ if "%1"=="--help" (
     echo   --no-palette        Disable palette selection
     echo   --spi-40            Set SPI speed to 40MHz (stable)
     echo   --spi-62.5          Set SPI speed to 62.5MHz (fast, default)
+    echo   --offset-x=N        X offset adjustment from base (47): -47 to +273
+    echo   --offset-y=N        Y offset adjustment from base (2): -2 to +238
     echo   --clean             Clean build directory first
     echo   --help              Show this help
     echo.
@@ -21,6 +23,9 @@ if "%1"=="--help" (
     echo   %0 --test               # Test mode build
     echo   %0 --spi-40             # Stable 40MHz SPI build
     echo   %0 --dither-fast        # Fast dither build
+    echo   %0 --offset-x=-1        # Shift display left by 1 pixel
+    echo   %0 --offset-y=3         # Shift display down by 3 pixels
+    echo   %0 --offset-x=-5 --offset-y=2  # Both X and Y adjustments
     echo   %0 --clean --test       # Clean + test mode build
     echo   %0 --spi-40 --no-palette # Stable build, no palette selection
     exit /b 0
@@ -58,6 +63,23 @@ if "%1"=="--spi-62.5" (
 if "%1"=="--clean" (
     set CLEAN_BUILD=true
     shift & goto parse_args
+)
+REM Handle offset parameters with values
+if "%~1" NEQ "" (
+    echo %1 | findstr /C:"--offset-x=" >nul
+    if !errorlevel! equ 0 (
+        for /f "tokens=2 delims==" %%a in ("%1") do (
+            set CMAKE_ARGS=!CMAKE_ARGS! -DOFFSET_X_ADJUST=%%a
+        )
+        shift & goto parse_args
+    )
+    echo %1 | findstr /C:"--offset-y=" >nul
+    if !errorlevel! equ 0 (
+        for /f "tokens=2 delims==" %%a in ("%1") do (
+            set CMAKE_ARGS=!CMAKE_ARGS! -DOFFSET_Y_ADJUST=%%a
+        )
+        shift & goto parse_args
+    )
 )
 echo Unknown option: %1
 exit /b 1

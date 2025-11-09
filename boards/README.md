@@ -234,6 +234,9 @@ Both hardware versions support the same build options:
 ./build_all.sh --no-palette     # Disable palette selection
 ./build_all.sh --spi-40         # 40MHz SPI (stable)
 ./build_all.sh --spi-62.5       # 62.5MHz SPI (fast)
+./build_all.sh --offset-x=-1    # Adjust display X position
+./build_all.sh --offset-y=3     # Adjust display Y position
+./build_all.sh --offset-x=-5 --offset-y=2  # Both X and Y adjustments
 ```
 
 ## Support

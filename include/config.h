@@ -15,6 +15,8 @@
 // -DDISABLE_PALETTE_SELECTION=ON/OFF
 // -DDITHER_MODE=FAST/BEST (when BW_DITHER is enabled)
 // -DSPI_SPEED=40/62.5
+// -DOFFSET_X_ADJUST=<value> (adjust X offset from base 47: -47 to +273)
+// -DOFFSET_Y_ADJUST=<value> (adjust Y offset from base 2: -2 to +238)
 
 // Hardware Pin Definitions - v1.1a
 #ifdef VERSION_V1_1a
@@ -50,10 +52,31 @@
 #define DISPLAY_SCALE   1.6
 #define DISPLAY_ROTATION ili9341::ROTATION_270
 #define FILL_COLOR      ili9341::BLACK
-#define X_OFF 49
-#define Y_OFF 7
+
+// Base offset values
+#define X_OFF_BASE 47
+#define Y_OFF_BASE 2
+
+// Configurable offsets with bounds checking
+// X_OFF: must be between 0 and (LCD_W - SCALED_W)
+// Y_OFF: must be between 0 and (LCD_H - SCALED_H)
 #define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
+
+#ifndef OFFSET_X_ADJUST
+    #define OFFSET_X_ADJUST 0
+#endif
+#ifndef OFFSET_Y_ADJUST
+    #define OFFSET_Y_ADJUST 0
+#endif
+
+// Calculate final offsets with bounds checking
+#define X_OFF_CALC (X_OFF_BASE + OFFSET_X_ADJUST)
+#define Y_OFF_CALC (Y_OFF_BASE + OFFSET_Y_ADJUST)
+
+// Clamp offsets to valid ranges
+#define X_OFF ((X_OFF_CALC < 0) ? 0 : ((X_OFF_CALC > (LCD_W - SCALED_W)) ? (LCD_W - SCALED_W) : X_OFF_CALC))
+#define Y_OFF ((Y_OFF_CALC < 0) ? 0 : ((Y_OFF_CALC > (LCD_H - SCALED_H)) ? (LCD_H - SCALED_H) : Y_OFF_CALC))
 
 // LCD SPI Configuration
 #ifdef SPI_SPEED_40MHZ
