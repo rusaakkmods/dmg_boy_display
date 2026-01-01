@@ -12,11 +12,8 @@
 // Configuration options are now set via CMake build system:
 // -DENABLE_DISPLAY_TEST=ON/OFF
 // -DENABLE_BW_DITHER=ON/OFF  
-// -DDISABLE_PALETTE_SELECTION=ON/OFF
 // -DDITHER_MODE=FAST/BEST (when BW_DITHER is enabled)
 // -DSPI_SPEED=40/62.5
-// -DOFFSET_X_ADJUST=<value> (adjust X offset from base 47: -47 to +273)
-// -DOFFSET_Y_ADJUST=<value> (adjust Y offset from base 2: -2 to +238)
 
 // Hardware Pin Definitions - v1.1
 #ifdef VERSION_V1_1
@@ -45,7 +42,7 @@
     #define PIN_DC 12
     #define PIN_RESET 13
     #define PIN_BL 8
-    #define PIN_PALETTE_ADC 29  // ADC3 - 10K trimmer for palette selection
+    #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
     #define GB_PIN_BASE 2
 #endif
 
@@ -68,13 +65,6 @@
 #define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
-#ifndef OFFSET_X_ADJUST
-    #define OFFSET_X_ADJUST 0
-#endif
-#ifndef OFFSET_Y_ADJUST
-    #define OFFSET_Y_ADJUST 0
-#endif
-
 // Default offset values (used for initialization) - defaults to base values
 #define X_OFF_DEFAULT X_OFF_BASE
 #define Y_OFF_DEFAULT Y_OFF_BASE
@@ -83,7 +73,7 @@
 extern int16_t X_OFF;
 extern int16_t Y_OFF;
 
-// Offset adjustment ranges (relative to base: -5 to +5)
+// Offset range limits for runtime control
 #define OFFSET_X_MIN (X_OFF_BASE - 5)
 #define OFFSET_X_MAX (X_OFF_BASE + 5)
 #define OFFSET_Y_MIN (Y_OFF_BASE - 5)

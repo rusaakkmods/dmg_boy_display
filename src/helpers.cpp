@@ -306,12 +306,10 @@ void display_logo(ili9341::ILI9341& lcd) {
 }
 
 void init_adc() {
-#ifndef DISABLE_PALETTE_SELECTION
     adc_init();
     adc_gpio_init(PIN_PALETTE_ADC);
     gpio_pull_up(PIN_PALETTE_ADC);
     adc_select_input(3);
-#endif
 }
 
 void init_gpio() {
@@ -420,8 +418,8 @@ void apply_scanlines(uint16_t* buf, int w, int h, uint8_t mode, uint8_t intensit
 // Palette and Color Management
 void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bool* show_osd) {
 #ifdef VERSION_V1_0
-    // v1.0: Simple palette control via trimmer (if palette selection enabled)
-    #if !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
+    // v1.0: Simple palette control via potentiometer
+    #ifndef ENABLE_BW_DITHER
         static uint8_t last_palette_index = 0xFF;
         uint8_t current_palette_index = get_selected_palette_index();
         
@@ -927,19 +925,17 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
                     }
                 }
             #else
-                // v1.0: Direct palette control with trimmer (if enabled)
-                #ifndef DISABLE_PALETTE_SELECTION
-                    static uint8_t last_palette_index = 0xFF;
-                    uint8_t current_palette_index = get_selected_palette_index();
-                    
-                    if (current_palette_index != last_palette_index) {
-                        gb_colors = PALETTE_LIST[current_palette_index];
-                        last_palette_index = current_palette_index;
-                    }
-                #endif
+                // v1.0: Direct palette control with potentiometer
+                static uint8_t last_palette_index = 0xFF;
+                uint8_t current_palette_index = get_selected_palette_index();
+                
+                if (current_palette_index != last_palette_index) {
+                    gb_colors = PALETTE_LIST[current_palette_index];
+                    last_palette_index = current_palette_index;
+                }
             #endif
         #endif
-        
+
         generate_test_pattern(screenBuffer, pattern);
         
         scale_frame(screenBuffer, scaledBuf, xmap, ymap);

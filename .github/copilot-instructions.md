@@ -41,9 +41,6 @@ All features are controlled via CMake options, **not** by editing source files:
 | `ENABLE_BW_DITHER` | ON/OFF | Black & white dithering mode |
 | `DITHER_MODE` | FAST/BEST | Floyd-Steinberg (FAST) vs Atkinson (BEST) |
 | `SPI_SPEED` | 40/62.5 | SPI clock in MHz (40=stable, 62.5=fast) |
-| `OFFSET_X_ADJUST` | -47 to +273 | X position adjustment from base (47) |
-| `OFFSET_Y_ADJUST` | -2 to +238 | Y position adjustment from base (2) |
-| `DISABLE_PALETTE_SELECTION` | ON/OFF | Disable ADC/palette switching (saves GPIO 29) |
 
 ### Build Workflow
 
@@ -125,13 +122,6 @@ The PIO program ([pio/gblcd/gblcd.pio](pio/gblcd/gblcd.pio)) is **extremely simp
 3. Update [main.cpp](main.cpp) to instantiate new driver (replace `ili9341::ILI9341`)
 4. Add source files to `COMMON_SOURCES` in [CMakeLists.txt](CMakeLists.txt)
 
-### Adjusting Display Positioning
-**Do not modify `X_OFF_BASE` or `Y_OFF_BASE` in [config.h](include/config.h)**. Use CMake options:
-```bash
-cmake -B build -DOFFSET_X_ADJUST=5 -DOFFSET_Y_ADJUST=-2
-```
-Final offsets are auto-clamped to screen bounds.
-
 ### Debugging Capture Issues
 1. Enable test mode: `cmake -B build -DENABLE_DISPLAY_TEST=ON`
 2. Verify test patterns display correctly (rules out display/SPI issues)
@@ -155,10 +145,9 @@ Final offsets are auto-clamped to screen bounds.
 ## Gotchas
 
 1. **Wrong firmware on hardware**: Using v1.0 firmware on v1.1 (or vice versa) causes display corruption or no output
-2. **Offset overflow**: Setting `OFFSET_X_ADJUST` too large silently clamps - check calculated `X_OFF` in [config.h](include/config.h)
-3. **ADC noise**: Palette switching reads GPIO 29 ADC 8 times and averages (see [src/helpers.cpp](src/helpers.cpp))
-4. **Backlight control differs**: v1.0 uses GPIO on/off, v1.1 uses PWM via driver's `setBrightness()`
-5. **PIO pin base**: Changing `GB_PIN_BASE` requires pins to be sequential (0-3 relative to base)
+2. **ADC noise**: Palette switching reads GPIO 29 ADC 8 times and averages (see [src/helpers.cpp](src/helpers.cpp))
+3. **Backlight control differs**: v1.0 uses GPIO on/off, v1.1 uses PWM via driver's `setBrightness()`
+4. **PIO pin base**: Changing `GB_PIN_BASE` requires pins to be sequential (0-3 relative to base)
 
 ## Testing
 

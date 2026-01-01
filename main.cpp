@@ -49,14 +49,14 @@ int main() {
     static int ymap[SCALED_H];
     buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
 
-#if defined(VERSION_V1_1) && !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
+    #if defined(VERSION_V1_1) && !defined(ENABLE_BW_DITHER)
     uint8_t saved_palette_index = load_palette_from_eeprom();
     gb_colors = PALETTE_LIST[saved_palette_index];
     set_active_palette_index(saved_palette_index);
     save_palette_to_eeprom(saved_palette_index);
-#endif
+    #endif
 
-#ifdef VERSION_V1_1
+    #ifdef VERSION_V1_1
     // Load display offsets from EEPROM
     int16_t saved_offset_x = load_offset_x_from_eeprom();
     int16_t saved_offset_y = load_offset_y_from_eeprom();
@@ -82,9 +82,9 @@ int main() {
     // Load render mode from EEPROM
     uint8_t saved_render = load_render_mode_from_eeprom();
     set_render_mode(saved_render);
-#endif
+    #endif
 
-#ifdef ENABLE_DISPLAY_TEST
+    #ifdef ENABLE_DISPLAY_TEST
     display_test(lcd, screenBuffer, scaledBuf, xmap, ymap);
 #else
     // PIO initialization
