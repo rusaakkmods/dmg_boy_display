@@ -117,9 +117,15 @@ void draw_palette_osd(uint16_t* buffer, uint8_t palette_index, uint16_t fg_color
 // Track palette when entering palette mode
 static uint8_t palette_on_mode_entry = 0;
 
-// Mode switch debouncing
+// Double-click detection for mode switch
 static bool last_switch_state = false;
-static absolute_time_t last_switch_change_time;
+static uint32_t first_click_time = 0;
+static uint32_t click_count = 0;
+static bool palette_mode_active = false;
+static uint32_t last_palette_change_time = 0;
+
+const uint32_t DOUBLE_CLICK_WINDOW_MS = 500;  // 500ms window for double-click
+const uint32_t PALETTE_MODE_TIMEOUT_MS = 3000; // 3 second timeout
 #endif
 
 void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
@@ -211,84 +217,90 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
 #endif
 
 #ifdef VERSION_V1_1
-    // v1.1: Advanced controls with mode switch (palette vs brightness)
-    // Check mode switch: LOW=brightness control, HIGH=palette selection
-    static bool last_switch_state = false;
-    static uint32_t last_switch_change_time = 0;
-    const uint32_t DEBOUNCE_MS = 50;  // 50ms debounce delay
-    
-    bool current_switch_raw = gpio_get(PIN_MODE_SWITCH);
-    bool palette_mode = last_switch_state;  // Use debounced state
-    
-    // Debounce the switch
-    uint32_t now = to_ms_since_boot(get_absolute_time());
-    if (current_switch_raw != last_switch_state) {
-        if (now - last_switch_change_time > DEBOUNCE_MS) {
-            palette_mode = current_switch_raw;
-            last_switch_state = current_switch_raw;
-            last_switch_change_time = now;
-        }
-    }
-    
-    #ifndef ENABLE_BW_DITHER
-        static uint8_t last_palette_index = 0xFF;
-        static uint8_t last_palette_candidate = 0xFF;
-        static uint8_t palette_on_mode_entry = 0xFF;  // Track palette when entering palette mode
-        static bool was_in_palette_mode = false;
-    #endif
+    // v1.1: Advanced controls with double-press mode switch activation
+    static uint8_t last_palette_index = 0xFF;
+    static uint8_t last_palette_candidate = 0xFF;
+    static bool was_in_palette_mode = false;
     
     static uint8_t last_brightness_candidate = 0xFF;
     static bool was_in_brightness_mode = false;
-    static uint32_t osd_display_time = 0;
-    const uint32_t OSD_DURATION_MS = 2000;  // Show OSD for 2 seconds
     
-    if (palette_mode) {
-        // Palette selection mode (only if not using BW dither)
+    uint32_t now = to_ms_since_boot(get_absolute_time());
+    
+    // Detect button click (press and release cycle)
+    bool current_switch_state = gpio_get(PIN_MODE_SWITCH);
+    
+    // Detect falling edge (button release = complete click)
+    if (!current_switch_state && last_switch_state) {
+        // Button released - count as one click
+        if (click_count == 0) {
+            // First click
+            click_count = 1;
+            first_click_time = now;
+        } else if (click_count == 1 && (now - first_click_time < DOUBLE_CLICK_WINDOW_MS)) {
+            // Second click within window - double-click detected!
+            palette_mode_active = !palette_mode_active;
+            click_count = 0;
+            
+            if (palette_mode_active) {
+                // Entering palette mode
+                uint8_t current_palette_index = get_selected_palette_index();
+                last_palette_candidate = current_palette_index;
+                last_palette_index = current_palette_index;  // Set for immediate OSD display
+                palette_on_mode_entry = current_palette_index;
+                last_palette_change_time = now;
+                if (show_osd) *show_osd = true;
+            } else {
+                // Exiting palette mode manually
+                if (last_palette_index != palette_on_mode_entry) {
+                    save_palette_to_eeprom(last_palette_index);
+                }
+                if (show_osd) *show_osd = false;
+            }
+        }
+    }
+    
+    // Reset click count if window expired
+    if (click_count > 0 && (now - first_click_time > DOUBLE_CLICK_WINDOW_MS)) {
+        click_count = 0;
+    }
+    
+    last_switch_state = current_switch_state;
+    
+    // Auto-exit palette mode after timeout
+    if (palette_mode_active && (now - last_palette_change_time > PALETTE_MODE_TIMEOUT_MS)) {
+        palette_mode_active = false;
+        if (last_palette_index != palette_on_mode_entry) {
+            save_palette_to_eeprom(last_palette_index);
+        }
+        if (show_osd) *show_osd = false;
+    }
+    
+    if (palette_mode_active) {
+        // In palette selection mode
         #ifndef ENABLE_BW_DITHER
             uint8_t current_palette_index = get_selected_palette_index();
             
-            if (!was_in_palette_mode) {
-                // Just entered palette mode - save the starting palette
-                last_palette_candidate = current_palette_index;
-                palette_on_mode_entry = current_palette_index;
-                was_in_palette_mode = true;
-                osd_display_time = to_ms_since_boot(get_absolute_time());
-                if (show_osd) *show_osd = true;
-            }
-            
-            // Only change palette if pot value has changed while in palette mode
+            // Update palette if pot changed
             if (current_palette_index != last_palette_candidate) {
                 gb_colors = PALETTE_LIST[current_palette_index];
                 last_palette_index = current_palette_index;
                 last_palette_candidate = current_palette_index;
-                osd_display_time = to_ms_since_boot(get_absolute_time());
-                if (show_osd) *show_osd = true;
+                last_palette_change_time = now; // Reset timeout on change
             }
             
-            // Check if OSD should still be displayed
-            if (show_osd && *show_osd) {
-                uint32_t now = to_ms_since_boot(get_absolute_time());
-                if (now - osd_display_time > OSD_DURATION_MS) {
-                    *show_osd = false;
-                } else if (scaled_buffer) {
-                    // Draw OSD using palette colors
-                    draw_palette_osd(scaled_buffer, last_palette_index, gb_colors[0], gb_colors[3]);
-                }
+            // Keep OSD visible while in palette mode
+            if (show_osd && scaled_buffer) {
+                *show_osd = true;
+                draw_palette_osd(scaled_buffer, last_palette_index, gb_colors[0], gb_colors[3]);
             }
         #endif
         
         was_in_brightness_mode = false;
     } else {
-        // Brightness control mode
+        // In brightness control mode (default)
         #ifndef ENABLE_BW_DITHER
-            // Exiting palette mode - save if palette changed
-            if (was_in_palette_mode) {
-                if (last_palette_index != palette_on_mode_entry) {
-                    // Palette changed during palette mode, save to EEPROM
-                    save_palette_to_eeprom(last_palette_index);
-                }
-                was_in_palette_mode = false;
-            }
+            was_in_palette_mode = false;
         #endif
         
         uint8_t current_brightness = get_brightness_from_adc();
