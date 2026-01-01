@@ -30,6 +30,13 @@
     #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
     #define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
     #define GB_PIN_BASE     9
+    // I2C EEPROM pins (AT24C02)
+    // CORRECTED WIRING: GPIO14 → EEPROM SDA, GPIO15 → EEPROM SCL
+    // This matches RP2040 hardware I2C1: GPIO14=I2C1_SDA, GPIO15=I2C1_SCL
+    #define I2C_CHANNEL     i2c1
+    #define PIN_I2C_SDA     14    // GPIO14 = I2C1_SDA
+    #define PIN_I2C_SCL     15    // GPIO15 = I2C1_SCL
+    #define EEPROM_ADDR     0x50  // AT24C02 I2C address (7-bit)
 #else // VERSION_V1_0
     #define SPI_CHANNEL spi1
     #define PIN_MOSI 11

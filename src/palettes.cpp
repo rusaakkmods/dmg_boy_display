@@ -1,6 +1,9 @@
 #include "palettes.hpp"
 #include "config.h"
 
+// Make DEFAULT_PALETTE_NAME accessible
+const uint16_t* const DEFAULT_PALETTE_PTR = DEFAULT_PALETTE_NAME;
+
 const uint16_t* const PALETTE_LIST[] = {
     MODERN,
     ADVENTURER,

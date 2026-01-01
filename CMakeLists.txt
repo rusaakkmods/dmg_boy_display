@@ -121,8 +121,16 @@ apply_build_options(dmg_boy_display_v1_0)
 pico_generate_pio_header(dmg_boy_display_v1_1a ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
 pico_set_program_name(dmg_boy_display_v1_1a "dmg_boy_display_v1.1a")
 pico_set_program_version(dmg_boy_display_v1_1a "1.1.0")
-pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
-pico_enable_stdio_usb(dmg_boy_display_v1_1a 0)
+
+# Enable USB stdio in test mode for debugging
+if(ENABLE_DISPLAY_TEST)
+    pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
+    pico_enable_stdio_usb(dmg_boy_display_v1_1a 1)
+else()
+    pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
+    pico_enable_stdio_usb(dmg_boy_display_v1_1a 0)
+endif()
+
 target_include_directories(dmg_boy_display_v1_1a PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_link_libraries(dmg_boy_display_v1_1a
     pico_stdlib hardware_spi hardware_gpio hardware_dma hardware_pio 

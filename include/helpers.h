@@ -5,7 +5,11 @@
 #include "displays/ili9341/ili9341.hpp"
 
 // Forward declarations
+#ifdef ENABLE_BW_DITHER
+extern const uint16_t gb_colors[4];
+#else
 extern const uint16_t* gb_colors;
+#endif
 
 /**
  * ADC and Input Functions
@@ -84,6 +88,42 @@ ili9341::Config init_lcd_config();
  * @param lcd LCD display instance
  */
 void update_hardware_controls(ili9341::ILI9341& lcd);
+
+#ifdef VERSION_V1_1a
+/**
+ * I2C EEPROM Storage Functions (v1.1a only - AT24C02)
+ */
+
+/**
+ * Initialize I2C EEPROM (AT24C02) on GPIO14/GPIO15
+ */
+void init_eeprom();
+
+/**
+ * Test EEPROM save/load functionality with visual feedback
+ * Shows green screen if successful, red if failed
+ */
+void test_eeprom_save_load(ili9341::ILI9341& lcd);
+
+/**
+ * Save the current palette index to EEPROM
+ * Only writes if the palette has changed from what's currently saved
+ * @param palette_index The palette index to save (0 to NUM_PALETTES-1)
+ */
+void save_palette_to_eeprom(uint8_t palette_index);
+
+/**
+ * Load the saved palette index from EEPROM
+ * @return Saved palette index, or DEFAULT_PALETTE_INDEX if not found/invalid
+ */
+uint8_t load_palette_from_eeprom();
+
+/**
+ * Get the default palette index based on DEFAULT_PALETTE_NAME
+ * @return Index of the default palette
+ */
+uint8_t get_default_palette_index();
+#endif // VERSION_V1_1a
 
 /**
  * Frame Processing Functions

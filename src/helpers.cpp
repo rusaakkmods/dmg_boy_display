@@ -9,8 +9,13 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
+#ifdef VERSION_V1_1a
+#include "hardware/i2c.h"
+#endif
 
+#ifndef ENABLE_BW_DITHER
 extern const uint16_t* gb_colors;
+#endif
 
 uint8_t get_selected_palette_index() {
     // Read ADC multiple times and average to reduce noise
@@ -35,6 +40,145 @@ uint8_t get_brightness_from_adc() {
     uint8_t brightness = BRIGHTNESS_MIN + ((adc_value * BRIGHTNESS_RANGE) / ADC_MAX_VALUE);
     return brightness;
 }
+
+#ifdef VERSION_V1_1a
+
+// EEPROM memory layout
+#define EEPROM_PALETTE_ADDR 0x00
+#define PALETTE_MAGIC 0x45
+
+struct PaletteEEPROMData {
+    uint8_t magic;
+    uint8_t palette_index;
+};
+
+// Cache last EEPROM value to avoid redundant writes
+static uint8_t cached_eeprom_palette = 0;
+static bool eeprom_cache_valid = false;
+
+// Track palette when entering palette mode
+static uint8_t palette_on_mode_entry = 0;
+
+// Mode switch debouncing
+static bool last_switch_state = false;
+static absolute_time_t last_switch_change_time;
+
+uint8_t get_default_palette_index() {
+    const uint16_t* default_palette = DEFAULT_PALETTE_NAME;
+    for (size_t i = 0; i < NUM_PALETTES; i++) {
+        if (PALETTE_LIST[i] == default_palette) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+void init_eeprom() {
+    printf("[EEPROM] Initializing hardware I2C1...\n");
+    
+    // Initialize I2C peripheral at 100kHz
+    i2c_init(I2C_CHANNEL, 100 * 1000);
+    
+    // Configure GPIO pins for I2C function
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+    
+    // Enable internal pull-ups (external 4.7kΩ also present)
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
+    
+    printf("[EEPROM] I2C1 initialized: GPIO14=SDA, GPIO15=SCL, 100kHz\n");
+    
+    // AT24C02D power-up time
+    sleep_ms(10);
+}
+
+void save_palette_to_eeprom(uint8_t palette_index) {
+    if (palette_index >= NUM_PALETTES) {
+        return;
+    }
+    
+    if (eeprom_cache_valid && cached_eeprom_palette == palette_index) {
+        return;
+    }
+    
+    printf("[EEPROM] Saving palette %d...\n", palette_index);
+    
+    // Write: device address, memory address (16-bit), magic, palette
+    uint8_t write_buf[4];
+    write_buf[0] = 0x00;  // Memory address high byte
+    write_buf[1] = EEPROM_PALETTE_ADDR;  // Memory address low byte
+    write_buf[2] = PALETTE_MAGIC;
+    write_buf[3] = palette_index;
+    
+    int result = i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, write_buf, 4, false);
+    
+    if (result == 4) {
+        sleep_ms(5);  // Write cycle time
+        cached_eeprom_palette = palette_index;
+        eeprom_cache_valid = true;
+        printf("[EEPROM] Saved successfully\n");
+    }
+}
+
+uint8_t load_palette_from_eeprom() {
+    printf("[EEPROM] Loading palette...\n");
+    
+    // Write memory address (16-bit)
+    uint8_t addr_buf[2] = {0x00, EEPROM_PALETTE_ADDR};
+    int write_result = i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, addr_buf, 2, true);
+    
+    if (write_result != 2) {
+        printf("[EEPROM] Address write failed\n");
+        uint8_t default_idx = get_default_palette_index();
+        cached_eeprom_palette = 0xFF;
+        eeprom_cache_valid = false;
+        save_palette_to_eeprom(default_idx);
+        return default_idx;
+    }
+    
+    // Read magic and palette index
+    uint8_t read_buf[2];
+    int read_result = i2c_read_blocking(I2C_CHANNEL, EEPROM_ADDR, read_buf, 2, false);
+    
+    if (read_result != 2) {
+        printf("[EEPROM] Read failed\n");
+        uint8_t default_idx = get_default_palette_index();
+        cached_eeprom_palette = 0xFF;
+        eeprom_cache_valid = false;
+        save_palette_to_eeprom(default_idx);
+        return default_idx;
+    }
+    
+    uint8_t magic = read_buf[0];
+    uint8_t palette_idx = read_buf[1];
+    
+    // Validate
+    if (magic != PALETTE_MAGIC) {
+        printf("[EEPROM] First boot - initializing with default palette\n");
+        uint8_t default_idx = get_default_palette_index();
+        cached_eeprom_palette = 0xFF;
+        eeprom_cache_valid = false;
+        save_palette_to_eeprom(default_idx);
+        return default_idx;
+    }
+    
+    if (palette_idx >= NUM_PALETTES) {
+        printf("[EEPROM] Invalid palette %d - initializing with default\n", palette_idx);
+        uint8_t default_idx = get_default_palette_index();
+        cached_eeprom_palette = 0xFF;  // Force write by invalidating cache
+        eeprom_cache_valid = false;
+        save_palette_to_eeprom(default_idx);
+        return default_idx;
+    }
+    
+    cached_eeprom_palette = palette_idx;
+    eeprom_cache_valid = true;
+    printf("[EEPROM] Loaded palette %d\n", palette_idx);
+    
+    return palette_idx;
+}
+#endif // VERSION_V1_1a
 
 void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
 #ifdef VERSION_V1_0
@@ -79,10 +223,12 @@ void init_adc() {
 
 void init_gpio() {
 #ifdef VERSION_V1_1a
-    // Initialize mode switch GPIO (pull-down: LOW=palette, HIGH=brightness)
+    // Initialize mode switch GPIO
+    // Switch hardware: when closed/ON = connects to 3.3V (HIGH) = palette mode
+    //                  when open/OFF = pulled down (LOW) = brightness mode
     gpio_init(PIN_MODE_SWITCH);
     gpio_set_dir(PIN_MODE_SWITCH, GPIO_IN);
-    gpio_pull_down(PIN_MODE_SWITCH);
+    gpio_pull_down(PIN_MODE_SWITCH);  // Pull-down for when switch is open
 #endif
 
 #ifdef VERSION_V1_0
@@ -137,11 +283,27 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
 #ifdef VERSION_V1_1a
     // v1.1a: Advanced controls with mode switch (palette vs brightness)
     // Check mode switch: LOW=brightness control, HIGH=palette selection
-    bool palette_mode = gpio_get(PIN_MODE_SWITCH);
+    static bool last_switch_state = false;
+    static uint32_t last_switch_change_time = 0;
+    const uint32_t DEBOUNCE_MS = 50;  // 50ms debounce delay
+    
+    bool current_switch_raw = gpio_get(PIN_MODE_SWITCH);
+    bool palette_mode = last_switch_state;  // Use debounced state
+    
+    // Debounce the switch
+    uint32_t now = to_ms_since_boot(get_absolute_time());
+    if (current_switch_raw != last_switch_state) {
+        if (now - last_switch_change_time > DEBOUNCE_MS) {
+            palette_mode = current_switch_raw;
+            last_switch_state = current_switch_raw;
+            last_switch_change_time = now;
+        }
+    }
     
     #ifndef ENABLE_BW_DITHER
         static uint8_t last_palette_index = 0xFF;
         static uint8_t last_palette_candidate = 0xFF;
+        static uint8_t palette_on_mode_entry = 0xFF;  // Track palette when entering palette mode
         static bool was_in_palette_mode = false;
     #endif
     
@@ -154,7 +316,9 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
             uint8_t current_palette_index = get_selected_palette_index();
             
             if (!was_in_palette_mode) {
+                // Just entered palette mode - save the starting palette
                 last_palette_candidate = current_palette_index;
+                palette_on_mode_entry = current_palette_index;
                 was_in_palette_mode = true;
             }
             
@@ -170,19 +334,25 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
     } else {
         // Brightness control mode
         #ifndef ENABLE_BW_DITHER
-            was_in_palette_mode = false;
+            // Exiting palette mode - save if palette changed
+            if (was_in_palette_mode) {
+                if (last_palette_index != palette_on_mode_entry) {
+                    // Palette changed during palette mode, save to EEPROM
+                    save_palette_to_eeprom(last_palette_index);
+                }
+                was_in_palette_mode = false;
+            }
         #endif
         
         uint8_t current_brightness = get_brightness_from_adc();
         
-        // If we just entered brightness mode, store current candidate
+        // If we just entered brightness mode, store current candidate WITHOUT applying
         if (!was_in_brightness_mode) {
             last_brightness_candidate = current_brightness;
             was_in_brightness_mode = true;
         }
-        
-        // Only change brightness if pot value has changed while in brightness mode
-        if (current_brightness != last_brightness_candidate) {
+        // Only change brightness if pot value has changed AFTER entering brightness mode
+        else if (current_brightness != last_brightness_candidate) {
             apply_brightness(lcd, current_brightness);
             last_brightness_candidate = current_brightness;
         }
@@ -309,6 +479,38 @@ uint8_t get_blink_pin() {
 #endif
 }
 
+#ifdef VERSION_V1_1a
+void test_eeprom_save_load(ili9341::ILI9341& lcd) {
+    printf("[EEPROM TEST] Testing hardware I2C...\n");
+    printf("[EEPROM TEST] GPIO14=SDA, GPIO15=SCL\n");
+    
+    // Test write/read
+    const uint8_t TEST_VALUE = 42;
+    
+    uint8_t write_buf[4] = {0x00, EEPROM_PALETTE_ADDR, PALETTE_MAGIC, TEST_VALUE};
+    i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, write_buf, 4, false);
+    sleep_ms(10);
+    
+    uint8_t addr_buf[2] = {0x00, EEPROM_PALETTE_ADDR};
+    i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, addr_buf, 2, true);
+    
+    uint8_t read_buf[2];
+    i2c_read_blocking(I2C_CHANNEL, EEPROM_ADDR, read_buf, 2, false);
+    
+    printf("[EEPROM TEST] Magic=0x%02X, Value=%d\n", read_buf[0], read_buf[1]);
+    
+    if (read_buf[0] == PALETTE_MAGIC && read_buf[1] == TEST_VALUE) {
+        printf("[EEPROM TEST] SUCCESS!\n");
+        lcd.clearScreen(0x07E0);  // Green
+    } else {
+        printf("[EEPROM TEST] FAILED!\n");
+        lcd.clearScreen(0xF800);  // Red
+    }
+    
+    sleep_ms(2000);
+}
+#endif
+
 void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scaledBuf, int* xmap, int* ymap) {
     uint8_t blink_pin = get_blink_pin();
     gpio_init(blink_pin);
@@ -324,17 +526,39 @@ void display_test(ili9341::ILI9341& lcd, uint16_t* screenBuffer, uint16_t* scale
                 bool palette_mode = gpio_get(PIN_MODE_SWITCH);
                 static uint8_t last_palette_index = 0xFF;
                 static uint8_t last_brightness = 0xFF;
+                static uint8_t palette_on_mode_entry = 0xFF;  // Track palette when entering palette mode
+                static bool was_in_palette_mode = false;
                 
                 if (palette_mode) {
                     // Palette selection mode
                     uint8_t current_palette_index = get_selected_palette_index();
+                    
+                    if (!was_in_palette_mode) {
+                        // Just entered palette mode - save the starting palette
+                        palette_on_mode_entry = current_palette_index;
+                        was_in_palette_mode = true;
+                    }
+                    
                     if (current_palette_index != last_palette_index) {
                         gb_colors = PALETTE_LIST[current_palette_index];
                         last_palette_index = current_palette_index;
                     }
                 } else {
                     // Brightness control mode
+                    // Exiting palette mode - save if palette changed
+                    if (was_in_palette_mode) {
+                        if (last_palette_index != palette_on_mode_entry && last_palette_index != 0xFF) {
+                            // Palette changed during palette mode, save to EEPROM
+                            save_palette_to_eeprom(last_palette_index);
+                        }
+                        was_in_palette_mode = false;
+                        // Update brightness candidate to current ADC position WITHOUT applying
+                        // This prevents brightness jump when exiting palette mode
+                        last_brightness = get_brightness_from_adc();
+                    }
+                    
                     uint8_t current_brightness = get_brightness_from_adc();
+                    // Only apply brightness if it changed after we entered brightness mode
                     if (current_brightness != last_brightness) {
                         apply_brightness(lcd, current_brightness);
                         last_brightness = current_brightness;
