@@ -5,17 +5,6 @@
 #include "displays/ili9341/ili9341.hpp"
 #include "palettes.hpp"
 
-// Version will be defined by CMake build system:
-// -DVERSION_V1_1 for v1.1 variant
-// -DVERSION_V1_0 for v1.0 variant
-
-// Configuration options are now set via CMake build system:
-// -DENABLE_DISPLAY_TEST=ON/OFF
-// -DENABLE_BW_DITHER=ON/OFF  
-// -DDITHER_MODE=FAST/BEST (when BW_DITHER is enabled)
-// -DSPI_SPEED=40/62.5
-
-// Hardware Pin Definitions - v1.1
 #ifdef VERSION_V1_1
     #define SPI_CHANNEL     spi0
     #define PIN_MOSI        3
@@ -24,111 +13,95 @@
     #define PIN_DC          4
     #define PIN_RESET       7
     #define PIN_BL          8
-    #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
-    #define PIN_MODE_SWITCH 2   // Mode switch: LOW=brightness, HIGH=palette
+    #define PIN_PALETTE_ADC 29
+    #define PIN_MODE_SWITCH 2
     #define GB_PIN_BASE     9
-    // I2C EEPROM pins (AT24C02)
-    // CORRECTED WIRING: GPIO14 → EEPROM SDA, GPIO15 → EEPROM SCL
-    // This matches RP2040 hardware I2C1: GPIO14=I2C1_SDA, GPIO15=I2C1_SCL
     #define I2C_CHANNEL     i2c1
-    #define PIN_I2C_SDA     14    // GPIO14 = I2C1_SDA
-    #define PIN_I2C_SCL     15    // GPIO15 = I2C1_SCL
-    #define EEPROM_ADDR     0x50  // AT24C02 I2C address (7-bit)
-#else // VERSION_V1_0
-    #define SPI_CHANNEL spi1
-    #define PIN_MOSI 11
-    #define PIN_SCK 10
-    #define PIN_CS 9
-    #define PIN_DC 12
-    #define PIN_RESET 13
-    #define PIN_BL 8
-    #define PIN_PALETTE_ADC 29  // ADC3 - 10K potentiometer
-    #define GB_PIN_BASE 2
+    #define PIN_I2C_SDA     14
+    #define PIN_I2C_SCL     15
+    #define EEPROM_ADDR     0x50
+#else
+    #define SPI_CHANNEL     spi1
+    #define PIN_MOSI        11
+    #define PIN_SCK         10
+    #define PIN_CS          9
+    #define PIN_DC          12
+    #define PIN_RESET       13
+    #define PIN_BL          8
+    #define PIN_PALETTE_ADC 29
+    #define GB_PIN_BASE     2
 #endif
 
-// Game Boy LCD Specifications
-#define DMG_W 160
-#define DMG_H 144
+constexpr int DMG_W = 160;
+constexpr int DMG_H = 144;
 
-// Display Configuration - ILI9341
-#define LCD_W           320      
-#define LCD_H           240      
-#define DISPLAY_SCALE   1.6
-#define DISPLAY_ROTATION ili9341::ROTATION_270
-#define FILL_COLOR      ili9341::BLACK
+constexpr int LCD_W = 320;
+constexpr int LCD_H = 240;
+constexpr float DISPLAY_SCALE = 1.6f;
+#define DISPLAY_ROTATION    ili9341::ROTATION_270
+#define FILL_COLOR          ili9341::BLACK
 
-// Base offset values
-#define X_OFF_BASE 47
-#define Y_OFF_BASE 2
+constexpr int16_t X_OFF_BASE = 47;
+constexpr int16_t Y_OFF_BASE = 2;
+constexpr int SCALED_W = static_cast<int>(DMG_W * DISPLAY_SCALE + 0.5f);
+constexpr int SCALED_H = static_cast<int>(DMG_H * DISPLAY_SCALE + 0.5f);
+constexpr int16_t X_OFF_DEFAULT = X_OFF_BASE;
+constexpr int16_t Y_OFF_DEFAULT = Y_OFF_BASE;
 
-// Configurable offsets with bounds checking
-#define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
-#define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
-
-// Default offset values (used for initialization) - defaults to base values
-#define X_OFF_DEFAULT X_OFF_BASE
-#define Y_OFF_DEFAULT Y_OFF_BASE
-
-// Runtime offset variables (defined in helpers.cpp)
 extern int16_t X_OFF;
 extern int16_t Y_OFF;
 
-// Offset range limits for runtime control
-#define OFFSET_X_MIN (X_OFF_BASE - 5)
-#define OFFSET_X_MAX (X_OFF_BASE + 5)
-#define OFFSET_Y_MIN (Y_OFF_BASE - 5)
-#define OFFSET_Y_MAX (Y_OFF_BASE + 5)
+constexpr int16_t OFFSET_X_MIN = X_OFF_BASE - 5;
+constexpr int16_t OFFSET_X_MAX = X_OFF_BASE + 5;
+constexpr int16_t OFFSET_Y_MIN = Y_OFF_BASE - 5;
+constexpr int16_t OFFSET_Y_MAX = Y_OFF_BASE + 5;
 
-// LCD SPI Configuration
 #ifdef SPI_SPEED_40MHZ
-    #define LCD_SPI_SPEED   (40 * 1000 * 1000)
+    constexpr uint32_t LCD_SPI_SPEED = 40 * 1000 * 1000;
 #else
-    #define LCD_SPI_SPEED   (62.5 * 1000 * 1000)  // Default to 62.5MHz
+    constexpr uint32_t LCD_SPI_SPEED = static_cast<uint32_t>(62.5 * 1000 * 1000);
 #endif
-#define LCD_DMA_BUFFER  2560
-#define LCD_BRIGHTNESS  128  // 50% brightness
+constexpr int LCD_DMA_BUFFER = 2560;
+constexpr uint8_t LCD_BRIGHTNESS = 128;
 
-// Palette Configuration
 extern const uint16_t* const PALETTE_LIST[];
 extern const size_t NUM_PALETTES;
-
-// Default Palette Selection - use palette name directly
-// Change this to any palette name defined in palettes.hpp
 #define DEFAULT_PALETTE_NAME GRAYSCALE
 
-// Dither palette setup
 #ifdef ENABLE_BW_DITHER
     extern const uint16_t BW_BLACK;
     extern const uint16_t BW_WHITE;
-    
-    #ifdef DITHER_BEST
-        extern const uint16_t gb_colors[4];
-    #else
-        extern const uint16_t gb_colors[4];
-    #endif
+    extern const uint16_t gb_colors[4];
 #else
     extern const uint16_t* gb_colors;
 #endif
 
-// Test Pattern Configuration
-#define TEST_BLINK_IO_V1_1 2
-#define TEST_BLINK_IO_V1_0 7
-#define TEST_PATTERN_DELAY_MS 1000
-#define NUM_TEST_PATTERNS 6
+constexpr uint8_t TEST_BLINK_IO_V1_1 = 2;
+constexpr uint8_t TEST_BLINK_IO_V1_0 = 7;
+constexpr uint32_t TEST_PATTERN_DELAY_MS = 1000;
+constexpr int NUM_TEST_PATTERNS = 6;
 
-// ADC Configuration
-#define ADC_OVERSAMPLE_COUNT 8
-#define ADC_DELAY_US 10
-#define ADC_MAX_VALUE 4096
-#define BRIGHTNESS_MIN 5
-#define BRIGHTNESS_MAX 128
-#define BRIGHTNESS_RANGE (BRIGHTNESS_MAX - BRIGHTNESS_MIN)
-#define BRIGHTNESS_THRESHOLD_V1_0 64
+constexpr int ADC_OVERSAMPLE_COUNT = 8;
+constexpr uint32_t ADC_DELAY_US = 10;
+constexpr int ADC_MAX_VALUE = 4096;
+constexpr uint8_t BRIGHTNESS_MIN = 5;
+constexpr uint8_t BRIGHTNESS_MAX = 128;
+constexpr uint8_t BRIGHTNESS_RANGE = BRIGHTNESS_MAX - BRIGHTNESS_MIN;
+constexpr uint8_t BRIGHTNESS_THRESHOLD_V1_0 = 64;
 
-// Logo Display Configuration
-#define LOGO_DISPLAY_DELAY_MS 100
-#define LOGO_BRIGHTNESS_DELAY_MS 50
-#define LOGO_TOTAL_DELAY_MS 900
+constexpr uint32_t LOGO_DISPLAY_DELAY_MS = 100;
+constexpr uint32_t LOGO_BRIGHTNESS_DELAY_MS = 50;
+constexpr uint32_t LOGO_TOTAL_DELAY_MS = 900;
 
-// Scaling optimization
-#define SCALE_UNROLL_FACTOR 8
+constexpr int SCALE_UNROLL_FACTOR = 8;
+
+constexpr uint8_t SCANLINE_INTENSITY_MIN = 64;
+constexpr uint8_t SCANLINE_INTENSITY_MAX = 192;
+constexpr uint8_t SCANLINE_INTENSITY_DEFAULT = 128;
+
+#ifndef GIT_HASH
+    #define GIT_HASH "unknown"
+#endif
+#ifndef GIT_TAG
+    #define GIT_TAG "dev"
+#endif

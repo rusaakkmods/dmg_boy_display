@@ -30,6 +30,28 @@ include(pico_sdk_import.cmake)
 
 project(dmg_boy_display C CXX ASM)
 
+# Git version embedding
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT GIT_HASH)
+    set(GIT_HASH "unknown")
+endif()
+execute_process(
+    COMMAND git describe --tags --abbrev=0
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT GIT_TAG)
+    set(GIT_TAG "dev")
+endif()
+
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
@@ -93,6 +115,22 @@ function(apply_build_options target_name)
     else()
         target_compile_definitions(${target_name} PRIVATE SPI_SPEED_62_5MHZ)
     endif()
+    
+    # Embed git version
+    target_compile_definitions(${target_name} PRIVATE
+        GIT_HASH="${GIT_HASH}"
+        GIT_TAG="${GIT_TAG}"
+    )
+    
+    # Optimization flags for release builds
+    target_compile_options(${target_name} PRIVATE
+        -Os
+        -ffunction-sections
+        -fdata-sections
+    )
+    target_link_options(${target_name} PRIVATE
+        -Wl,--gc-sections
+    )
 endfunction()
 
 # Build v1.1 variant

@@ -1,4 +1,5 @@
 #include "dither.hpp"
+#include "config.h"
 #include <algorithm>
 
 // Improved 8x8 Bayer matrix with better distribution
@@ -65,17 +66,14 @@ void fast_bayer_dither(uint16_t* buf, int w, int h, const uint16_t palette[4], u
 }
 
 void floyd_steinberg_dither(uint16_t* buf, int w, int h, const uint16_t palette[4], uint16_t bw_white, uint16_t bw_black) {
-    // Create a working buffer with error accumulation (use int32 to handle error propagation)
-    static int32_t error_buf[128 * 128]; // Assuming max size, adjust if needed
+    static int16_t error_buf[SCALED_W * SCALED_H];
     
-    // Calculate target luminance values
     int target_white = rgb565_to_luma_accurate(bw_white);
     int target_black = rgb565_to_luma_accurate(bw_black);
-    int mid_luma = (target_white + target_black) / 2;
+    int mid_luma = (target_white + target_black) >> 1;
     
-    // Initialize error buffer with input luminance values
     for (int i = 0; i < w * h; i++) {
-        error_buf[i] = rgb565_to_luma_accurate(buf[i]);
+        error_buf[i] = static_cast<int16_t>(rgb565_to_luma_accurate(buf[i]));
     }
     
     for (int y = 0; y < h; y++) {
@@ -83,30 +81,19 @@ void floyd_steinberg_dither(uint16_t* buf, int w, int h, const uint16_t palette[
             int idx = y * w + x;
             int old_pixel = error_buf[idx];
             
-            // Determine new pixel value
-            uint16_t new_pixel = (old_pixel >= mid_luma) ? bw_white : bw_black;
-            int new_luma = (old_pixel >= mid_luma) ? target_white : target_black;
+            bool is_white = old_pixel >= mid_luma;
+            buf[idx] = is_white ? bw_white : bw_black;
             
-            buf[idx] = new_pixel;
+            int error = old_pixel - (is_white ? target_white : target_black);
             
-            // Calculate error
-            int error = old_pixel - new_luma;
-            
-            // Distribute error using Floyd-Steinberg weights
-            // Pixel layout: X = current, . = future
-            //     X 7
-            //   3 5 1
-            if (x + 1 < w) {
-                error_buf[idx + 1] += (error * 7) / 16;
-            }
+            if (x + 1 < w)
+                error_buf[idx + 1] += (error * 7) >> 4;
             if (y + 1 < h) {
-                if (x > 0) {
-                    error_buf[idx + w - 1] += (error * 3) / 16;
-                }
-                error_buf[idx + w] += (error * 5) / 16;
-                if (x + 1 < w) {
-                    error_buf[idx + w + 1] += (error * 1) / 16;
-                }
+                if (x > 0)
+                    error_buf[idx + w - 1] += (error * 3) >> 4;
+                error_buf[idx + w] += (error * 5) >> 4;
+                if (x + 1 < w)
+                    error_buf[idx + w + 1] += error >> 4;
             }
         }
     }
