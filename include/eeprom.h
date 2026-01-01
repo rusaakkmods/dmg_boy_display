@@ -51,6 +51,18 @@ void save_offset_y_to_eeprom(int16_t offset_y);
  */
 int16_t load_offset_y_from_eeprom();
 
+/**
+ * Save render mode to EEPROM
+ * @param render_mode Render mode value (0=normal, 1=scanline)
+ */
+void save_render_mode_to_eeprom(uint8_t render_mode);
+
+/**
+ * Load render mode from EEPROM
+ * @return Render mode value (0=normal, 1=scanline)
+ */
+uint8_t load_render_mode_from_eeprom();
+
 #endif // VERSION_V1_1
 
 #endif // EEPROM_H

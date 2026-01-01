@@ -136,6 +136,7 @@ enum ControlMode {
     MODE_PALETTE,
     MODE_OFFSET_X,
     MODE_OFFSET_Y,
+    MODE_RENDER,
     MODE_COUNT
 };
 
@@ -143,14 +144,20 @@ enum ControlMode {
 static uint8_t palette_on_mode_entry = 0;
 static int16_t offset_x_on_mode_entry = X_OFF_BASE;
 static int16_t offset_y_on_mode_entry = Y_OFF_BASE;
+static uint8_t render_on_mode_entry = 0;
 
 // Track ADC position on mode entry for soft-takeover
 static uint16_t adc_on_palette_entry = 0;
 static uint16_t adc_on_offset_x_entry = 0;
 static uint16_t adc_on_offset_y_entry = 0;
+static uint16_t adc_on_render_entry = 0;
 static bool palette_pot_moved = false;
 static bool offset_x_pot_moved = false;
 static bool offset_y_pot_moved = false;
+static bool render_pot_moved = false;
+
+// Render mode storage
+static uint8_t last_render_mode = 0;  // 0 = normal, 1 = scanline
 
 // Current control mode
 static ControlMode current_mode = MODE_BRIGHTNESS;
@@ -163,6 +170,9 @@ static uint32_t last_mode_change_time = 0;
 
 const uint32_t DOUBLE_CLICK_WINDOW_MS = 500;  // 500ms window for double-click
 const uint32_t MODE_TIMEOUT_MS = 3000; // 3 second timeout
+const int ADC_THRESHOLD = 100;  // Soft-takeover threshold
+
+static const char* RENDER_MODE_NAMES[] = {"normal", "scanline_h", "scanline_x"};
 
 // Helper function to map ADC value to offset range
 static int16_t map_adc_to_offset(uint16_t adc_val, int16_t min_val, int16_t max_val) {
@@ -188,6 +198,9 @@ static void draw_mode_osd(uint16_t* buffer, ControlMode mode, const char* value_
                 break;
             case MODE_OFFSET_Y:
                 mode_prefix = "offset-y:";
+                break;
+            case MODE_RENDER:
+                mode_prefix = "render:";
                 break;
             default:
                 return;
@@ -341,6 +354,69 @@ ili9341::Config init_lcd_config() {
     return config;
 }
 
+#ifdef VERSION_V1_1
+uint8_t get_render_mode() {
+    return last_render_mode;
+}
+
+void set_render_mode(uint8_t mode) {
+    if (mode <= 2) {
+        last_render_mode = mode;
+    }
+}
+
+// Apply scanline effect (CRT-style darkening)
+// mode: 1=horizontal lines, 2=crosshatch (horizontal+vertical)
+void apply_scanlines(uint16_t* buf, int w, int h, uint8_t mode, uint8_t intensity) {
+    if (mode == 1) {
+        // Horizontal scanlines only - darken every other horizontal line (starting at y=1)
+        for (int y = 1; y < h; y += 2) {
+            for (int x = 0; x < w; x++) {
+                int idx = y * w + x;
+                uint16_t pixel = buf[idx];
+                
+                // Extract RGB565 components
+                uint8_t r = (pixel >> 11) & 0x1F;  // 5 bits
+                uint8_t g = (pixel >> 5) & 0x3F;   // 6 bits
+                uint8_t b = pixel & 0x1F;          // 5 bits
+                
+                // Apply darkening based on intensity (0-255 maps to 0-100% darkening)
+                r = (r * (255 - intensity)) / 255;
+                g = (g * (255 - intensity)) / 255;
+                b = (b * (255 - intensity)) / 255;
+                
+                // Recombine to RGB565
+                buf[idx] = (r << 11) | (g << 5) | b;
+            }
+        }
+    } else if (mode == 2) {
+        // Crosshatch pattern - darken both horizontal and vertical lines
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                // Darken if on odd row OR odd column
+                if ((y % 2 == 1) || (x % 2 == 1)) {
+                    int idx = y * w + x;
+                    uint16_t pixel = buf[idx];
+                    
+                    // Extract RGB565 components
+                    uint8_t r = (pixel >> 11) & 0x1F;  // 5 bits
+                    uint8_t g = (pixel >> 5) & 0x3F;   // 6 bits
+                    uint8_t b = pixel & 0x1F;          // 5 bits
+                    
+                    // Apply darkening based on intensity
+                    r = (r * (255 - intensity)) / 255;
+                    g = (g * (255 - intensity)) / 255;
+                    b = (b * (255 - intensity)) / 255;
+                    
+                    // Recombine to RGB565
+                    buf[idx] = (r << 11) | (g << 5) | b;
+                }
+            }
+        }
+    }
+}
+#endif // VERSION_V1_1
+
 // Palette and Color Management
 void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bool* show_osd) {
 #ifdef VERSION_V1_0
@@ -394,9 +470,12 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
                 adc_on_palette_entry = adc_read();
                 adc_on_offset_x_entry = adc_read();
                 adc_on_offset_y_entry = adc_read();
+                adc_on_render_entry = adc_read();
+                render_on_mode_entry = last_render_mode;
                 palette_pot_moved = false;
                 offset_x_pot_moved = false;
                 offset_y_pot_moved = false;
+                render_pot_moved = false;
                 if (show_osd) *show_osd = true;
             } else if (current_mode == MODE_PALETTE) {
                 // Move to offset-x mode
@@ -411,6 +490,12 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
                 offset_y_pot_moved = false;
                 if (show_osd) *show_osd = true;
             } else if (current_mode == MODE_OFFSET_Y) {
+                // Move to render mode
+                current_mode = MODE_RENDER;
+                adc_on_render_entry = adc_read();
+                render_pot_moved = false;
+                if (show_osd) *show_osd = true;
+            } else if (current_mode == MODE_RENDER) {
                 // Loop back to palette mode
                 current_mode = MODE_PALETTE;
                 adc_on_palette_entry = adc_read();
@@ -458,6 +543,9 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
         }
         if (last_offset_y_value != offset_y_on_mode_entry) {
             save_offset_y_to_eeprom(last_offset_y_value);
+        }
+        if (last_render_mode != render_on_mode_entry) {
+            save_render_mode_to_eeprom(last_render_mode);
         }
         
         // Show "settings saved" message
@@ -594,8 +682,40 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
             }
             break;
         }
-        
-        default:
+                case MODE_RENDER: {
+            // Read ADC and map to render mode (0, 1, or 2)
+            uint16_t adc_val = adc_read();
+            
+            // Check if pot has moved significantly from entry position
+            if (!render_pot_moved) {
+                if (abs((int)adc_val - (int)adc_on_render_entry) > ADC_THRESHOLD) {
+                    render_pot_moved = true;
+                }
+            }
+            
+            // Only update render mode if pot has been moved
+            if (render_pot_moved) {
+                // Map ADC to 0, 1, or 2 (divide into thirds: 0-1365, 1366-2730, 2731-4095)
+                uint8_t new_render_mode = (adc_val < 1366) ? 0 : (adc_val < 2731) ? 1 : 2;
+                
+                if (new_render_mode != last_render_mode) {
+                    last_render_mode = new_render_mode;
+                    last_mode_change_time = now; // Reset timeout on change
+                }
+            }
+            
+            // Show OSD with render mode name
+            if (show_osd && scaled_buffer) {
+                *show_osd = true;
+                #ifndef ENABLE_BW_DITHER
+                    draw_mode_osd(scaled_buffer, MODE_RENDER, RENDER_MODE_NAMES[last_render_mode], gb_colors[0], gb_colors[3]);
+                #else
+                    draw_mode_osd(scaled_buffer, MODE_RENDER, RENDER_MODE_NAMES[last_render_mode], BW_WHITE, BW_BLACK);
+                #endif
+            }
+            break;
+        }
+                default:
             break;
     }
     }  // End of !showing_saved_message check

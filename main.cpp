@@ -78,6 +78,10 @@ int main() {
     } else {
         Y_OFF = Y_OFF_BASE;
     }
+    
+    // Load render mode from EEPROM
+    uint8_t saved_render = load_render_mode_from_eeprom();
+    set_render_mode(saved_render);
 #endif
 
 #ifdef ENABLE_DISPLAY_TEST
@@ -139,6 +143,12 @@ int main() {
         apply_dithering(scaledBuf);
         
 #ifdef VERSION_V1_1
+        // Apply scanline effect if enabled
+        uint8_t render_mode = get_render_mode();
+        if (render_mode > 0) {
+            apply_scanlines(scaledBuf, SCALED_W, SCALED_H, render_mode, 128);
+        }
+        
         static bool show_osd = false;
         update_hardware_controls(lcd, scaledBuf, &show_osd);
         

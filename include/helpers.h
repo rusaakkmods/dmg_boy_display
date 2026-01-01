@@ -185,3 +185,25 @@ void generate_test_pattern(uint16_t* screenBuffer, int pattern);
  * @return GPIO pin number for status LED
  */
 uint8_t get_blink_pin();
+
+/**
+ * Apply scanline effect to buffer (CRT-style darkening of alternate lines)
+ * @param buf Buffer containing RGB565 pixels
+ * @param w Width of buffer
+ * @param h Height of buffer
+ * @param mode 1=horizontal scanlines, 2=crosshatch (h+v)
+ * @param intensity Darkening intensity (0-255, 128=50%)
+ */
+void apply_scanlines(uint16_t* buf, int w, int h, uint8_t mode, uint8_t intensity);
+
+/**
+ * Get current render mode
+ * @return 0=normal, 1=scanline
+ */
+uint8_t get_render_mode();
+
+/**
+ * Set render mode
+ * @param mode 0=normal, 1=scanline
+ */
+void set_render_mode(uint8_t mode);
