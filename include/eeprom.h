@@ -27,6 +27,30 @@ void save_palette_to_eeprom(uint8_t palette_index);
  */
 uint8_t load_palette_from_eeprom();
 
+/**
+ * Save X offset to EEPROM
+ * @param offset_x X offset value (-47 to +273)
+ */
+void save_offset_x_to_eeprom(int16_t offset_x);
+
+/**
+ * Load X offset from EEPROM
+ * @return X offset value, or 0 if EEPROM unavailable/invalid
+ */
+int16_t load_offset_x_from_eeprom();
+
+/**
+ * Save Y offset to EEPROM
+ * @param offset_y Y offset value (-2 to +238)
+ */
+void save_offset_y_to_eeprom(int16_t offset_y);
+
+/**
+ * Load Y offset from EEPROM
+ * @return Y offset value, or 0 if EEPROM unavailable/invalid
+ */
+int16_t load_offset_y_from_eeprom();
+
 #endif // VERSION_V1_1
 
 #endif // EEPROM_H

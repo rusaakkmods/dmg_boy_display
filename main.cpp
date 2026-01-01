@@ -52,7 +52,32 @@ int main() {
 #if defined(VERSION_V1_1) && !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
     uint8_t saved_palette_index = load_palette_from_eeprom();
     gb_colors = PALETTE_LIST[saved_palette_index];
+    set_active_palette_index(saved_palette_index);
     save_palette_to_eeprom(saved_palette_index);
+#endif
+
+#ifdef VERSION_V1_1
+    // Load display offsets from EEPROM
+    int16_t saved_offset_x = load_offset_x_from_eeprom();
+    int16_t saved_offset_y = load_offset_y_from_eeprom();
+    
+    // Validate and apply loaded offsets
+    // Use base if no EEPROM data (0) or if offset is too far from base (>10 pixels)
+    if (saved_offset_x == 0 || abs(saved_offset_x - X_OFF_BASE) > 10) {
+        X_OFF = X_OFF_BASE;
+    } else if (saved_offset_x >= 0 && saved_offset_x <= (LCD_W - SCALED_W)) {
+        X_OFF = saved_offset_x;
+    } else {
+        X_OFF = X_OFF_BASE;
+    }
+    
+    if (saved_offset_y == 0 || abs(saved_offset_y - Y_OFF_BASE) > 10) {
+        Y_OFF = Y_OFF_BASE;
+    } else if (saved_offset_y >= 0 && saved_offset_y <= (LCD_H - SCALED_H)) {
+        Y_OFF = saved_offset_y;
+    } else {
+        Y_OFF = Y_OFF_BASE;
+    }
 #endif
 
 #ifdef ENABLE_DISPLAY_TEST
@@ -70,6 +95,11 @@ int main() {
     bool vSyncFallingEdgeDetected = false;
     bool firstRun = false;
     uint16_t data0, data1, vSync;
+
+#ifdef VERSION_V1_1
+    int16_t last_rendered_x_off = X_OFF;
+    int16_t last_rendered_y_off = Y_OFF;
+#endif
 
     while (true) {
         uint32_t result = pio_sm_get_blocking(pio, state_machine_id);
@@ -111,6 +141,13 @@ int main() {
 #ifdef VERSION_V1_1
         static bool show_osd = false;
         update_hardware_controls(lcd, scaledBuf, &show_osd);
+        
+        // Clear screen only when offset changes to prevent ghosting
+        if (X_OFF != last_rendered_x_off || Y_OFF != last_rendered_y_off) {
+            lcd.clearScreen(0x0000);  // Clear with black
+            last_rendered_x_off = X_OFF;
+            last_rendered_y_off = Y_OFF;
+        }
 #else
         update_hardware_controls(lcd);
 #endif

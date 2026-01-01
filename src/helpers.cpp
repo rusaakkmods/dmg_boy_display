@@ -6,6 +6,7 @@
 #include "palettes.hpp"
 #include "font5x7.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
@@ -15,9 +16,24 @@
 #include "eeprom.h"
 #endif
 
+// Runtime offset variables
+int16_t X_OFF = X_OFF_DEFAULT;
+int16_t Y_OFF = Y_OFF_DEFAULT;
+
 #ifndef ENABLE_BW_DITHER
 extern const uint16_t* gb_colors;
 #endif
+
+// Track current palette index globally so we know what's actually being used
+static uint8_t current_active_palette_index = 0xFF;
+
+void set_active_palette_index(uint8_t index) {
+    current_active_palette_index = index;
+}
+
+uint8_t get_active_palette_index() {
+    return current_active_palette_index;
+}
 
 uint8_t get_selected_palette_index() {
     // Read ADC multiple times and average to reduce noise
@@ -114,18 +130,142 @@ void draw_palette_osd(uint16_t* buffer, uint8_t palette_index, uint16_t fg_color
 
 #ifdef VERSION_V1_1
 
-// Track palette when entering palette mode
+// Control modes enum
+enum ControlMode {
+    MODE_BRIGHTNESS = 0,
+    MODE_PALETTE,
+    MODE_OFFSET_X,
+    MODE_OFFSET_Y,
+    MODE_COUNT
+};
+
+// Track values when entering each mode
 static uint8_t palette_on_mode_entry = 0;
+static int16_t offset_x_on_mode_entry = X_OFF_BASE;
+static int16_t offset_y_on_mode_entry = Y_OFF_BASE;
+
+// Track ADC position on mode entry for soft-takeover
+static uint16_t adc_on_palette_entry = 0;
+static uint16_t adc_on_offset_x_entry = 0;
+static uint16_t adc_on_offset_y_entry = 0;
+static bool palette_pot_moved = false;
+static bool offset_x_pot_moved = false;
+static bool offset_y_pot_moved = false;
+
+// Current control mode
+static ControlMode current_mode = MODE_BRIGHTNESS;
 
 // Double-click detection for mode switch
 static bool last_switch_state = false;
 static uint32_t first_click_time = 0;
 static uint32_t click_count = 0;
-static bool palette_mode_active = false;
-static uint32_t last_palette_change_time = 0;
+static uint32_t last_mode_change_time = 0;
 
 const uint32_t DOUBLE_CLICK_WINDOW_MS = 500;  // 500ms window for double-click
-const uint32_t PALETTE_MODE_TIMEOUT_MS = 3000; // 3 second timeout
+const uint32_t MODE_TIMEOUT_MS = 3000; // 3 second timeout
+
+// Helper function to map ADC value to offset range
+static int16_t map_adc_to_offset(uint16_t adc_val, int16_t min_val, int16_t max_val) {
+    return min_val + ((adc_val * (max_val - min_val + 1)) / 4096);
+}
+
+// Helper function to draw OSD with mode-specific text
+static void draw_mode_osd(uint16_t* buffer, ControlMode mode, const char* value_text, uint16_t fg_color, uint16_t bg_color, int pos_x = 4, int pos_y = 4) {
+    const char* mode_prefix = nullptr;
+    
+    // Special case: if value_text is "settings saved", show no prefix
+    bool show_prefix = true;
+    if (strcmp(value_text, "settings saved") == 0) {
+        show_prefix = false;
+        mode_prefix = "";
+    } else {
+        switch (mode) {
+            case MODE_PALETTE:
+                mode_prefix = "palette:";
+                break;
+            case MODE_OFFSET_X:
+                mode_prefix = "offset-x:";
+                break;
+            case MODE_OFFSET_Y:
+                mode_prefix = "offset-y:";
+                break;
+            default:
+                return;
+        }
+    }
+    
+    const int char_width = 6;
+    const int char_height = 7;
+    const int padding = 2;
+    
+    // Calculate text dimensions
+    int prefix_len = 0;
+    for (int i = 0; mode_prefix[i] != '\0'; i++) prefix_len++;
+    
+    int value_len = 0;
+    for (int i = 0; value_text[i] != '\0'; i++) value_len++;
+    
+    int total_chars = prefix_len + value_len;
+    int box_width = total_chars * char_width + padding * 2;
+    int box_height = char_height + padding * 2;
+    
+    int start_x = pos_x;
+    int start_y = pos_y;
+    
+    // Draw background box
+    for (int dy = 0; dy < box_height; dy++) {
+        for (int dx = 0; dx < box_width; dx++) {
+            int px = start_x + dx;
+            int py = start_y + dy;
+            if (px < SCALED_W && py < SCALED_H) {
+                buffer[py * SCALED_W + px] = bg_color;
+            }
+        }
+    }
+    
+    // Draw text
+    int cursor_x = start_x + padding;
+    int cursor_y = start_y + padding;
+    
+    // Draw mode prefix
+    for (int i = 0; mode_prefix[i] != '\0'; i++) {
+        char c = mode_prefix[i];
+        uint8_t glyph_idx = get_font_index(c);
+        const uint8_t* glyph = font5x7[glyph_idx];
+        for (int cx = 0; cx < 5; cx++) {
+            for (int cy = 0; cy < 7; cy++) {
+                if (glyph[cx] & (1 << cy)) {
+                    int px = cursor_x + cx;
+                    int py = cursor_y + cy;
+                    if (px < SCALED_W && py < SCALED_H) {
+                        buffer[py * SCALED_W + px] = fg_color;
+                    }
+                }
+            }
+        }
+        cursor_x += char_width;
+    }
+    
+    // Draw value
+    for (int i = 0; value_text[i] != '\0'; i++) {
+        char c = value_text[i];
+        uint8_t glyph_idx = get_font_index(c);
+        const uint8_t* glyph = font5x7[glyph_idx];
+        for (int cx = 0; cx < 5; cx++) {
+            for (int cy = 0; cy < 7; cy++) {
+                if (glyph[cx] & (1 << cy)) {
+                    int px = cursor_x + cx;
+                    int py = cursor_y + cy;
+                    if (px < SCALED_W && py < SCALED_H) {
+                        buffer[py * SCALED_W + px] = fg_color;
+                    }
+                }
+            }
+        }
+        cursor_x += char_width;
+    }
+}
+
 #endif
 
 void apply_brightness(ili9341::ILI9341 &lcd, uint8_t brightness) {
@@ -217,13 +357,11 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
 #endif
 
 #ifdef VERSION_V1_1
-    // v1.1: Advanced controls with double-press mode switch activation
-    static uint8_t last_palette_index = 0xFF;
-    static uint8_t last_palette_candidate = 0xFF;
-    static bool was_in_palette_mode = false;
-    
-    static uint8_t last_brightness_candidate = 0xFF;
-    static bool was_in_brightness_mode = false;
+    // v1.1: Multi-mode controls (brightness → palette → offset-x → offset-y)
+    static uint8_t last_palette_index = get_active_palette_index();
+    static uint8_t last_brightness_value = 0xFF;
+    static int16_t last_offset_x_value = X_OFF;
+    static int16_t last_offset_y_value = Y_OFF;
     
     uint32_t now = to_ms_since_boot(get_absolute_time());
     
@@ -239,23 +377,45 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
             first_click_time = now;
         } else if (click_count == 1 && (now - first_click_time < DOUBLE_CLICK_WINDOW_MS)) {
             // Second click within window - double-click detected!
-            palette_mode_active = !palette_mode_active;
             click_count = 0;
+            last_mode_change_time = now;
             
-            if (palette_mode_active) {
-                // Entering palette mode
-                uint8_t current_palette_index = get_selected_palette_index();
-                last_palette_candidate = current_palette_index;
-                last_palette_index = current_palette_index;  // Set for immediate OSD display
-                palette_on_mode_entry = current_palette_index;
-                last_palette_change_time = now;
+            // Cycle modes: brightness → palette → offset-x → offset-y → palette (loop)
+            if (current_mode == MODE_BRIGHTNESS) {
+                current_mode = MODE_PALETTE;
+                // First time entering settings - capture starting values
+                palette_on_mode_entry = (last_palette_index == 0xFF) ? get_active_palette_index() : last_palette_index;
+                last_palette_index = palette_on_mode_entry;
+                offset_x_on_mode_entry = X_OFF;
+                last_offset_x_value = X_OFF;
+                offset_y_on_mode_entry = Y_OFF;
+                last_offset_y_value = Y_OFF;
+                // Capture initial ADC positions and reset moved flags
+                adc_on_palette_entry = adc_read();
+                adc_on_offset_x_entry = adc_read();
+                adc_on_offset_y_entry = adc_read();
+                palette_pot_moved = false;
+                offset_x_pot_moved = false;
+                offset_y_pot_moved = false;
                 if (show_osd) *show_osd = true;
-            } else {
-                // Exiting palette mode manually
-                if (last_palette_index != palette_on_mode_entry) {
-                    save_palette_to_eeprom(last_palette_index);
-                }
-                if (show_osd) *show_osd = false;
+            } else if (current_mode == MODE_PALETTE) {
+                // Move to offset-x mode
+                current_mode = MODE_OFFSET_X;
+                adc_on_offset_x_entry = adc_read();
+                offset_x_pot_moved = false;
+                if (show_osd) *show_osd = true;
+            } else if (current_mode == MODE_OFFSET_X) {
+                // Move to offset-y mode
+                current_mode = MODE_OFFSET_Y;
+                adc_on_offset_y_entry = adc_read();
+                offset_y_pot_moved = false;
+                if (show_osd) *show_osd = true;
+            } else if (current_mode == MODE_OFFSET_Y) {
+                // Loop back to palette mode
+                current_mode = MODE_PALETTE;
+                adc_on_palette_entry = adc_read();
+                palette_pot_moved = false;
+                if (show_osd) *show_osd = true;
             }
         }
     }
@@ -267,55 +427,178 @@ void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bo
     
     last_switch_state = current_switch_state;
     
-    // Auto-exit palette mode after timeout
-    if (palette_mode_active && (now - last_palette_change_time > PALETTE_MODE_TIMEOUT_MS)) {
-        palette_mode_active = false;
+    // Auto-exit modes after timeout (except brightness mode)
+    static bool showing_saved_message = false;
+    static uint32_t saved_message_start = 0;
+    
+    if (showing_saved_message) {
+        // Display "settings saved" for 1 second
+        if (now - saved_message_start < 1000) {
+            if (show_osd && scaled_buffer) {
+                *show_osd = true;
+                #ifndef ENABLE_BW_DITHER
+                    draw_mode_osd(scaled_buffer, MODE_PALETTE, "settings saved", gb_colors[0], gb_colors[3], 4, 4);
+                #else
+                    draw_mode_osd(scaled_buffer, MODE_PALETTE, "settings saved", BW_WHITE, BW_BLACK, 4, 4);
+                #endif
+            }
+        } else {
+            // Done showing message, exit to brightness mode
+            showing_saved_message = false;
+            current_mode = MODE_BRIGHTNESS;
+            if (show_osd) *show_osd = false;
+        }
+    } else if (current_mode != MODE_BRIGHTNESS && (now - last_mode_change_time > MODE_TIMEOUT_MS)) {
+        // Save all settings before exiting
         if (last_palette_index != palette_on_mode_entry) {
             save_palette_to_eeprom(last_palette_index);
         }
-        if (show_osd) *show_osd = false;
+        if (last_offset_x_value != offset_x_on_mode_entry) {
+            save_offset_x_to_eeprom(last_offset_x_value);
+        }
+        if (last_offset_y_value != offset_y_on_mode_entry) {
+            save_offset_y_to_eeprom(last_offset_y_value);
+        }
+        
+        // Show "settings saved" message
+        showing_saved_message = true;
+        saved_message_start = now;
     }
     
-    if (palette_mode_active) {
-        // In palette selection mode
-        #ifndef ENABLE_BW_DITHER
-            uint8_t current_palette_index = get_selected_palette_index();
+    // Handle mode-specific controls (skip if showing saved message)
+    if (!showing_saved_message) {
+        switch (current_mode) {
+            case MODE_BRIGHTNESS: {
+                uint8_t current_brightness = get_brightness_from_adc();
+                if (current_brightness != last_brightness_value) {
+                    apply_brightness(lcd, current_brightness);
+                    last_brightness_value = current_brightness;
+                }
+                break;
+            }
+        
+        case MODE_PALETTE: {
+            #ifndef ENABLE_BW_DITHER
+                uint16_t current_adc = adc_read();
+                const uint16_t ADC_THRESHOLD = 100; // Require pot movement before takeover
+                
+                // Check if pot has moved significantly from entry position
+                if (!palette_pot_moved) {
+                    if (abs((int)current_adc - (int)adc_on_palette_entry) > ADC_THRESHOLD) {
+                        palette_pot_moved = true;
+                    }
+                }
+                
+                // Only update palette if pot has been moved
+                if (palette_pot_moved) {
+                    uint8_t current_palette_index = get_selected_palette_index();
+                    if (current_palette_index != last_palette_index) {
+                        gb_colors = PALETTE_LIST[current_palette_index];
+                        last_palette_index = current_palette_index;
+                        set_active_palette_index(current_palette_index);
+                        last_mode_change_time = now; // Reset timeout on change
+                    }
+                }
+                
+                // Show OSD with palette name
+                if (show_osd && scaled_buffer) {
+                    *show_osd = true;
+                    draw_mode_osd(scaled_buffer, MODE_PALETTE, PALETTE_NAMES[last_palette_index], 
+                                 gb_colors[0], gb_colors[3]);
+                }
+            #endif
+            break;
+        }
+        
+        case MODE_OFFSET_X: {
+            // Read ADC and map to offset range
+            uint16_t adc_val = adc_read();
+            const uint16_t ADC_THRESHOLD = 100; // Require pot movement before takeover
             
-            // Update palette if pot changed
-            if (current_palette_index != last_palette_candidate) {
-                gb_colors = PALETTE_LIST[current_palette_index];
-                last_palette_index = current_palette_index;
-                last_palette_candidate = current_palette_index;
-                last_palette_change_time = now; // Reset timeout on change
+            // Check if pot has moved significantly from entry position
+            if (!offset_x_pot_moved) {
+                if (abs((int)adc_val - (int)adc_on_offset_x_entry) > ADC_THRESHOLD) {
+                    offset_x_pot_moved = true;
+                }
             }
             
-            // Keep OSD visible while in palette mode
+            // Only update offset if pot has been moved
+            if (offset_x_pot_moved) {
+                int16_t new_offset_x = map_adc_to_offset(adc_val, OFFSET_X_MIN, OFFSET_X_MAX);
+                
+                // Clamp to screen bounds
+                if (new_offset_x < 0) new_offset_x = 0;
+                if (new_offset_x > (LCD_W - SCALED_W)) new_offset_x = (LCD_W - SCALED_W);
+                
+                // Only update if ADC value changed significantly (prevents jitter)
+                if (new_offset_x != last_offset_x_value) {
+                    X_OFF = new_offset_x;
+                    last_offset_x_value = new_offset_x;
+                    last_mode_change_time = now; // Reset timeout on change
+                }
+            }
+            
+            // Show OSD with relative offset value from base
             if (show_osd && scaled_buffer) {
                 *show_osd = true;
-                draw_palette_osd(scaled_buffer, last_palette_index, gb_colors[0], gb_colors[3]);
+                char value_str[8];
+                int16_t relative_offset = last_offset_x_value - X_OFF_BASE;
+                snprintf(value_str, sizeof(value_str), "%+d", relative_offset);
+                #ifndef ENABLE_BW_DITHER
+                    draw_mode_osd(scaled_buffer, MODE_OFFSET_X, value_str, gb_colors[0], gb_colors[3]);
+                #else
+                    draw_mode_osd(scaled_buffer, MODE_OFFSET_X, value_str, BW_WHITE, BW_BLACK);
+                #endif
             }
-        #endif
-        
-        was_in_brightness_mode = false;
-    } else {
-        // In brightness control mode (default)
-        #ifndef ENABLE_BW_DITHER
-            was_in_palette_mode = false;
-        #endif
-        
-        uint8_t current_brightness = get_brightness_from_adc();
-        
-        // If we just entered brightness mode, store current candidate WITHOUT applying
-        if (!was_in_brightness_mode) {
-            last_brightness_candidate = current_brightness;
-            was_in_brightness_mode = true;
+            break;
         }
-        // Only change brightness if pot value has changed AFTER entering brightness mode
-        else if (current_brightness != last_brightness_candidate) {
-            apply_brightness(lcd, current_brightness);
-            last_brightness_candidate = current_brightness;
+        
+        case MODE_OFFSET_Y: {
+            // Read ADC and map to offset range
+            uint16_t adc_val = adc_read();
+            const uint16_t ADC_THRESHOLD = 100; // Require pot movement before takeover
+            
+            // Check if pot has moved significantly from entry position
+            if (!offset_y_pot_moved) {
+                if (abs((int)adc_val - (int)adc_on_offset_y_entry) > ADC_THRESHOLD) {
+                    offset_y_pot_moved = true;
+                }
+            }
+            
+            // Only update offset if pot has been moved
+            if (offset_y_pot_moved) {
+                int16_t new_offset_y = map_adc_to_offset(adc_val, OFFSET_Y_MIN, OFFSET_Y_MAX);
+                
+                // Clamp to screen bounds
+                if (new_offset_y < 0) new_offset_y = 0;
+                if (new_offset_y > (LCD_H - SCALED_H)) new_offset_y = (LCD_H - SCALED_H);
+                
+                if (new_offset_y != last_offset_y_value) {
+                    Y_OFF = new_offset_y;
+                    last_offset_y_value = new_offset_y;
+                    last_mode_change_time = now; // Reset timeout on change
+                }
+            }
+            
+            // Show OSD with relative offset value from base
+            if (show_osd && scaled_buffer) {
+                *show_osd = true;
+                char value_str[8];
+                int16_t relative_offset = last_offset_y_value - Y_OFF_BASE;
+                snprintf(value_str, sizeof(value_str), "%+d", relative_offset);
+                #ifndef ENABLE_BW_DITHER
+                    draw_mode_osd(scaled_buffer, MODE_OFFSET_Y, value_str, gb_colors[0], gb_colors[3]);
+                #else
+                    draw_mode_osd(scaled_buffer, MODE_OFFSET_Y, value_str, BW_WHITE, BW_BLACK);
+                #endif
+            }
+            break;
         }
+        
+        default:
+            break;
     }
+    }  // End of !showing_saved_message check
 #endif
 }
 

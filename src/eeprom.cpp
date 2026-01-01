@@ -7,17 +7,19 @@
 #include "config.h"
 #include "palettes.hpp"
 
-#define EEPROM_PALETTE_ADDR 0x00
-#define PALETTE_MAGIC 0x45
+#define EEPROM_SETTINGS_ADDR 0x00
+#define SETTINGS_MAGIC 0xA5
 
-struct PaletteEEPROMData {
+struct SettingsPackage {
     uint8_t magic;
     uint8_t palette_index;
+    int16_t offset_x;
+    int16_t offset_y;
 };
 
-// Cache last EEPROM value to avoid redundant writes
-static uint8_t cached_eeprom_palette = 0;
-static bool eeprom_cache_valid = false;
+// Cache current settings
+static SettingsPackage current_settings = {0, 0, X_OFF_BASE, Y_OFF_BASE};
+static bool settings_loaded = false;
 static bool eeprom_available = false;
 
 static uint8_t get_default_palette_index() {
@@ -42,48 +44,118 @@ void init_eeprom() {
     eeprom_available = (i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, test_buf, 1, true) == 1);
 }
 
-void save_palette_to_eeprom(uint8_t palette_index) {
-    if (!eeprom_available || palette_index >= NUM_PALETTES || (eeprom_cache_valid && cached_eeprom_palette == palette_index)) {
+static void save_settings_package() {
+    if (!eeprom_available) return;
+    
+    uint8_t write_buf[7] = {
+        EEPROM_SETTINGS_ADDR,
+        SETTINGS_MAGIC,
+        current_settings.palette_index,
+        (uint8_t)(current_settings.offset_x & 0xFF),
+        (uint8_t)((current_settings.offset_x >> 8) & 0xFF),
+        (uint8_t)(current_settings.offset_y & 0xFF),
+        (uint8_t)((current_settings.offset_y >> 8) & 0xFF)
+    };
+    
+    i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, write_buf, 7, false);
+    sleep_ms(5);
+}
+
+static void load_settings_package() {
+    if (settings_loaded) return;
+    
+    uint8_t default_palette = get_default_palette_index();
+    
+    if (!eeprom_available) {
+        current_settings.magic = SETTINGS_MAGIC;
+        current_settings.palette_index = default_palette;
+        current_settings.offset_x = X_OFF_BASE;
+        current_settings.offset_y = Y_OFF_BASE;
+        settings_loaded = true;
         return;
     }
     
-    uint8_t write_buf[4] = {0x00, EEPROM_PALETTE_ADDR, PALETTE_MAGIC, palette_index};
+    uint8_t addr_buf[1] = {EEPROM_SETTINGS_ADDR};
+    uint8_t read_buf[6];
     
-    if (i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, write_buf, 4, false) == 4) {
-        sleep_ms(5);
-        cached_eeprom_palette = palette_index;
-        eeprom_cache_valid = true;
+    if (i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, addr_buf, 1, true) != 1 ||
+        i2c_read_blocking(I2C_CHANNEL, EEPROM_ADDR, read_buf, 6, false) != 6) {
+        // EEPROM read failed, use defaults
+        current_settings.magic = SETTINGS_MAGIC;
+        current_settings.palette_index = default_palette;
+        current_settings.offset_x = X_OFF_BASE;
+        current_settings.offset_y = Y_OFF_BASE;
+        settings_loaded = true;
+        save_settings_package();
+        return;
+    }
+    
+    // Validate magic byte and data
+    if (read_buf[0] != SETTINGS_MAGIC || read_buf[1] >= NUM_PALETTES) {
+        // Invalid data, use defaults
+        current_settings.magic = SETTINGS_MAGIC;
+        current_settings.palette_index = default_palette;
+        current_settings.offset_x = X_OFF_BASE;
+        current_settings.offset_y = Y_OFF_BASE;
+        settings_loaded = true;
+        save_settings_package();
+        return;
+    }
+    
+    // Load valid settings
+    current_settings.magic = SETTINGS_MAGIC;
+    current_settings.palette_index = read_buf[1];
+    current_settings.offset_x = (int16_t)(read_buf[2] | (read_buf[3] << 8));
+    current_settings.offset_y = (int16_t)(read_buf[4] | (read_buf[5] << 8));
+    settings_loaded = true;
+}
+
+void save_palette_to_eeprom(uint8_t palette_index) {
+    if (!eeprom_available || palette_index >= NUM_PALETTES) return;
+    
+    load_settings_package();
+    
+    if (current_settings.palette_index != palette_index) {
+        current_settings.palette_index = palette_index;
+        save_settings_package();
     }
 }
 
 uint8_t load_palette_from_eeprom() {
-    uint8_t default_idx = get_default_palette_index();
+    load_settings_package();
+    return current_settings.palette_index;
+}
+
+void save_offset_x_to_eeprom(int16_t offset_x) {
+    if (!eeprom_available) return;
     
-    if (!eeprom_available) {
-        return default_idx;
+    load_settings_package();
+    
+    if (current_settings.offset_x != offset_x) {
+        current_settings.offset_x = offset_x;
+        save_settings_package();
     }
+}
+
+int16_t load_offset_x_from_eeprom() {
+    load_settings_package();
+    return current_settings.offset_x;
+}
+
+void save_offset_y_to_eeprom(int16_t offset_y) {
+    if (!eeprom_available) return;
     
-    uint8_t addr_buf[2] = {0x00, EEPROM_PALETTE_ADDR};
-    uint8_t read_buf[2];
+    load_settings_package();
     
-    if (i2c_write_blocking(I2C_CHANNEL, EEPROM_ADDR, addr_buf, 2, true) != 2 ||
-        i2c_read_blocking(I2C_CHANNEL, EEPROM_ADDR, read_buf, 2, false) != 2) {
-        cached_eeprom_palette = 0xFF;
-        eeprom_cache_valid = false;
-        save_palette_to_eeprom(default_idx);
-        return default_idx;
+    if (current_settings.offset_y != offset_y) {
+        current_settings.offset_y = offset_y;
+        save_settings_package();
     }
-    
-    if (read_buf[0] != PALETTE_MAGIC || read_buf[1] >= NUM_PALETTES) {
-        cached_eeprom_palette = 0xFF;
-        eeprom_cache_valid = false;
-        save_palette_to_eeprom(default_idx);
-        return default_idx;
-    }
-    
-    cached_eeprom_palette = read_buf[1];
-    eeprom_cache_valid = true;
-    return read_buf[1];
+}
+
+int16_t load_offset_y_from_eeprom() {
+    load_settings_package();
+    return current_settings.offset_y;
 }
 
 #endif // VERSION_V1_1

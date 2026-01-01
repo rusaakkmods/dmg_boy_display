@@ -65,8 +65,6 @@
 #define Y_OFF_BASE 2
 
 // Configurable offsets with bounds checking
-// X_OFF: must be between 0 and (LCD_W - SCALED_W)
-// Y_OFF: must be between 0 and (LCD_H - SCALED_H)
 #define SCALED_W (int)(DMG_W * DISPLAY_SCALE + 0.5f)
 #define SCALED_H (int)(DMG_H * DISPLAY_SCALE + 0.5f)
 
@@ -77,13 +75,19 @@
     #define OFFSET_Y_ADJUST 0
 #endif
 
-// Calculate final offsets with bounds checking
-#define X_OFF_CALC (X_OFF_BASE + OFFSET_X_ADJUST)
-#define Y_OFF_CALC (Y_OFF_BASE + OFFSET_Y_ADJUST)
+// Default offset values (used for initialization) - defaults to base values
+#define X_OFF_DEFAULT X_OFF_BASE
+#define Y_OFF_DEFAULT Y_OFF_BASE
 
-// Clamp offsets to valid ranges
-#define X_OFF ((X_OFF_CALC < 0) ? 0 : ((X_OFF_CALC > (LCD_W - SCALED_W)) ? (LCD_W - SCALED_W) : X_OFF_CALC))
-#define Y_OFF ((Y_OFF_CALC < 0) ? 0 : ((Y_OFF_CALC > (LCD_H - SCALED_H)) ? (LCD_H - SCALED_H) : Y_OFF_CALC))
+// Runtime offset variables (defined in helpers.cpp)
+extern int16_t X_OFF;
+extern int16_t Y_OFF;
+
+// Offset adjustment ranges (relative to base: -5 to +5)
+#define OFFSET_X_MIN (X_OFF_BASE - 5)
+#define OFFSET_X_MAX (X_OFF_BASE + 5)
+#define OFFSET_Y_MIN (Y_OFF_BASE - 5)
+#define OFFSET_Y_MAX (Y_OFF_BASE + 5)
 
 // LCD SPI Configuration
 #ifdef SPI_SPEED_40MHZ

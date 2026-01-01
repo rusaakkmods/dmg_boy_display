@@ -16,6 +16,16 @@ extern const uint16_t* gb_colors;
  */
 
 /**
+ * Set the currently active palette index (tracks what's actually being displayed)
+ */
+void set_active_palette_index(uint8_t index);
+
+/**
+ * Get the currently active palette index
+ */
+uint8_t get_active_palette_index();
+
+/**
  * Get the selected palette index from ADC reading
  * Uses oversampling to reduce noise
  * @return Palette index (0 to NUM_PALETTES-1)
