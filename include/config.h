@@ -6,7 +6,7 @@
 #include "palettes.hpp"
 
 // Version will be defined by CMake build system:
-// -DVERSION_V1_1a for v1.1a variant
+// -DVERSION_V1_1 for v1.1 variant
 // -DVERSION_V1_0 for v1.0 variant
 
 // Configuration options are now set via CMake build system:
@@ -18,8 +18,8 @@
 // -DOFFSET_X_ADJUST=<value> (adjust X offset from base 47: -47 to +273)
 // -DOFFSET_Y_ADJUST=<value> (adjust Y offset from base 2: -2 to +238)
 
-// Hardware Pin Definitions - v1.1a
-#ifdef VERSION_V1_1a
+// Hardware Pin Definitions - v1.1
+#ifdef VERSION_V1_1
     #define SPI_CHANNEL     spi0
     #define PIN_MOSI        3
     #define PIN_SCK         6
@@ -117,8 +117,8 @@ extern const size_t NUM_PALETTES;
 #endif
 
 // Test Pattern Configuration
-#define TEST_BLINK_IO_V1_1A 2
-#define TEST_BLINK_IO_V1_0  7
+#define TEST_BLINK_IO_V1_1 2
+#define TEST_BLINK_IO_V1_0 7
 #define TEST_PATTERN_DELAY_MS 1000
 #define NUM_TEST_PATTERNS 6
 

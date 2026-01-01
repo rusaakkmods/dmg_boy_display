@@ -4,7 +4,7 @@
 
 This is a **Raspberry Pi Pico (RP2040) firmware project** that captures Game Boy (DMG) LCD output in real-time and displays it on modern LCD screens. The system uses PIO (Programmable I/O) for high-speed capture and supports multiple display drivers.
 
-**Critical Context**: This project supports **two incompatible hardware versions** (v1.0 and v1.1a) with different GPIO pin assignments. The build system automatically generates separate firmware binaries for each version.
+**Critical Context**: This project supports **two incompatible hardware versions** (v1.0 and v1.1) with different GPIO pin assignments. The build system automatically generates separate firmware binaries for each version.
 
 ## Architecture
 
@@ -23,9 +23,9 @@ Game Boy LCD → PIO Capture (gblcd.pio) → Frame Buffer → Scaler → Ditheri
 
 **Pin assignments are version-specific and compile-time defined:**
 - v1.0: Game Boy on GPIO 2-5, Display on SPI1 (GPIO 9-13), single potentiometer
-- v1.1a: Game Boy on GPIO 9-12, Display on SPI0 (GPIO 3-7), potentiometer + mode switch
+- v1.1: Game Boy on GPIO 9-12, Display on SPI0 (GPIO 3-7), potentiometer + mode switch
 
-CMake builds both variants automatically with `-DVERSION_V1_0` and `-DVERSION_V1_1a` preprocessor flags.
+CMake builds both variants automatically with `-DVERSION_V1_0` and `-DVERSION_V1_1` preprocessor flags.
 
 See [boards/README.md](boards/README.md) for complete pin mappings and [include/config.h](include/config.h) for conditional compilation.
 
@@ -49,8 +49,8 @@ All features are controlled via CMake options, **not** by editing source files:
 
 **Using VS Code Tasks** (preferred):
 - `Ctrl+Shift+P` → "Tasks: Run Task" → Select from:
-  - `Compile Project` - Builds both v1.0 and v1.1a with current options
-  - `Build v1.0 Only` / `Build v1.1a Only` - Single-variant builds
+  - `Compile Project` - Builds both v1.0 and v1.1 with current options
+  - `Build v1.0 Only` / `Build v1.1 Only` - Single-variant builds
   - `Configure Build - [Option]` - Reconfigure CMake with specific options
 
 **Using build scripts**:
@@ -68,14 +68,14 @@ cmake -B build -DENABLE_BW_DITHER=ON -DDITHER_MODE=FAST -DSPI_SPEED=40
 ninja -C build  # or: %USERPROFILE%\.pico-sdk\ninja\v1.12.1\ninja.exe -C build
 ```
 
-Output: `build/dmg_boy_display_v1_0.uf2` and `build/dmg_boy_display_v1_1a.uf2`
+Output: `build/dmg_boy_display_v1_0.uf2` and `build/dmg_boy_display_v1_1.uf2`
 
 ## Project-Specific Conventions
 
 ### Configuration Philosophy
 - **Never hardcode in source**: All tunable parameters live in [include/config.h](include/config.h) as macros
 - **Build-time selection**: Features toggle via CMake options (converted to preprocessor flags)
-- **Hardware abstraction**: Use `#ifdef VERSION_V1_0` / `VERSION_V1_1a` for pin assignments
+- **Hardware abstraction**: Use `#ifdef VERSION_V1_0` / `VERSION_V1_1` for pin assignments
 
 ### Palette System
 Default palette is set in [config.h](include/config.h):
@@ -154,10 +154,10 @@ Final offsets are auto-clamped to screen bounds.
 
 ## Gotchas
 
-1. **Wrong firmware on hardware**: Using v1.0 firmware on v1.1a (or vice versa) causes display corruption or no output
+1. **Wrong firmware on hardware**: Using v1.0 firmware on v1.1 (or vice versa) causes display corruption or no output
 2. **Offset overflow**: Setting `OFFSET_X_ADJUST` too large silently clamps - check calculated `X_OFF` in [config.h](include/config.h)
 3. **ADC noise**: Palette switching reads GPIO 29 ADC 8 times and averages (see [src/helpers.cpp](src/helpers.cpp))
-4. **Backlight control differs**: v1.0 uses GPIO on/off, v1.1a uses PWM via driver's `setBrightness()`
+4. **Backlight control differs**: v1.0 uses GPIO on/off, v1.1 uses PWM via driver's `setBrightness()`
 5. **PIO pin base**: Changing `GB_PIN_BASE` requires pins to be sequential (0-3 relative to base)
 
 ## Testing

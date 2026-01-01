@@ -10,12 +10,11 @@
 #include "scaler.hpp"
 #include "config.h"
 #include "helpers.h"
+#include "eeprom.h"
 
 int main() {
-    stdio_init_all();
-    
 #ifdef ENABLE_DISPLAY_TEST
-    // Wait for USB serial connection in test mode (5 seconds)
+    stdio_init_all();
     printf("Waiting for USB serial connection...\n");
     for (int i = 5; i > 0; i--) {
         printf("Starting in %d seconds...\n", i);
@@ -27,11 +26,8 @@ int main() {
     init_adc();
     init_gpio();
     
-#ifdef VERSION_V1_1a
-    // Initialize I2C EEPROM for palette storage (v1.1a only)
-    printf("Initializing EEPROM...\n");
+#ifdef VERSION_V1_1
     init_eeprom();
-    printf("EEPROM initialized\n");
 #endif
     
     ili9341::ILI9341 lcd;
@@ -53,11 +49,9 @@ int main() {
     static int ymap[SCALED_H];
     buildScaleMaps(xmap, ymap, DMG_W, DMG_H, SCALED_W, SCALED_H, DISPLAY_SCALE);
 
-#if defined(VERSION_V1_1a) && !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
-    // Load saved palette from EEPROM on startup (v1.1a only)
+#if defined(VERSION_V1_1) && !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
     uint8_t saved_palette_index = load_palette_from_eeprom();
     gb_colors = PALETTE_LIST[saved_palette_index];
-    // Also save to EEPROM to verify write is working (will be skipped if already same)
     save_palette_to_eeprom(saved_palette_index);
 #endif
 

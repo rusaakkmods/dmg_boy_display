@@ -73,6 +73,7 @@ set(COMMON_SOURCES
     src/scaler.cpp
     src/helpers.cpp
     src/palettes.cpp
+    src/eeprom.cpp
 )
 
 # Function to apply common build options to a target
@@ -107,36 +108,36 @@ function(apply_build_options target_name)
     target_compile_definitions(${target_name} PRIVATE OFFSET_Y_ADJUST=${OFFSET_Y_ADJUST})
 endfunction()
 
-# Build v1.1a variant
-add_executable(dmg_boy_display_v1_1a ${COMMON_SOURCES})
-target_compile_definitions(dmg_boy_display_v1_1a PRIVATE VERSION_V1_1a)
-apply_build_options(dmg_boy_display_v1_1a)
+# Build v1.1 variant
+add_executable(dmg_boy_display_v1_1 ${COMMON_SOURCES})
+target_compile_definitions(dmg_boy_display_v1_1 PRIVATE VERSION_V1_1)
+apply_build_options(dmg_boy_display_v1_1)
 
 # Build v1.0 variant  
 add_executable(dmg_boy_display_v1_0 ${COMMON_SOURCES})
 target_compile_definitions(dmg_boy_display_v1_0 PRIVATE VERSION_V1_0)
 apply_build_options(dmg_boy_display_v1_0)
 
-# Configure v1.1a variant
-pico_generate_pio_header(dmg_boy_display_v1_1a ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
-pico_set_program_name(dmg_boy_display_v1_1a "dmg_boy_display_v1.1a")
-pico_set_program_version(dmg_boy_display_v1_1a "1.1.0")
+# Configure v1.1 variant
+pico_generate_pio_header(dmg_boy_display_v1_1 ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)
+pico_set_program_name(dmg_boy_display_v1_1 "dmg_boy_display_v1.1")
+pico_set_program_version(dmg_boy_display_v1_1 "1.1.0")
 
 # Enable USB stdio in test mode for debugging
 if(ENABLE_DISPLAY_TEST)
-    pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
-    pico_enable_stdio_usb(dmg_boy_display_v1_1a 1)
+    pico_enable_stdio_uart(dmg_boy_display_v1_1 0)
+    pico_enable_stdio_usb(dmg_boy_display_v1_1 1)
 else()
-    pico_enable_stdio_uart(dmg_boy_display_v1_1a 0)
-    pico_enable_stdio_usb(dmg_boy_display_v1_1a 0)
+    pico_enable_stdio_uart(dmg_boy_display_v1_1 0)
+    pico_enable_stdio_usb(dmg_boy_display_v1_1 0)
 endif()
 
-target_include_directories(dmg_boy_display_v1_1a PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(dmg_boy_display_v1_1a
+target_include_directories(dmg_boy_display_v1_1 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(dmg_boy_display_v1_1
     pico_stdlib hardware_spi hardware_gpio hardware_dma hardware_pio 
     hardware_pwm hardware_i2c hardware_adc hardware_watchdog
 )
-pico_add_extra_outputs(dmg_boy_display_v1_1a)
+pico_add_extra_outputs(dmg_boy_display_v1_1)
 
 # Configure v1.0 variant
 pico_generate_pio_header(dmg_boy_display_v1_0 ${CMAKE_CURRENT_LIST_DIR}/pio/gblcd/gblcd.pio)

@@ -11,7 +11,7 @@ This project supports **two different hardware board versions** with different p
 | Version | Game Boy Capture Pins | Display SPI | Controls |
 |---------|----------------------|-------------|----------|
 | **v1.0** | GPIO 2-5 | SPI1 (GPIO 9-13) | Single potentiometer |
-| **v1.1a** | GPIO 9-12 | SPI0 (GPIO 3-7) | Potentiometer + Mode switch |
+| **v1.1** | GPIO 9-12 | SPI0 (GPIO 3-7) | Potentiometer + Mode switch |
 
 📋 **[Complete Hardware Guide](boards/README.md)** - Detailed board identification, pin assignments, and troubleshooting
 
@@ -19,7 +19,7 @@ This project supports **two different hardware board versions** with different p
 
 The build system automatically generates firmware for both hardware versions:
 - `dmg_boy_display_v1_0.uf2` - For v1.0 hardware
-- `dmg_boy_display_v1_1a.uf2` - For v1.1a hardware
+- `dmg_boy_display_v1_1.uf2` - For v1.1 hardware
 
 ⚠️ **Always use the firmware that matches your hardware version!**
 
@@ -124,7 +124,7 @@ No need to rebuild with different options - just edit, compile, and flash!
 - **Ctrl+Shift+P** → Search for these tasks:
   - `Compile Project` - Build both variants (default options)
   - `Build v1.0 Only` - Build only v1.0 variant  
-  - `Build v1.1a Only` - Build only v1.1a variant
+  - `Build v1.1 Only` - Build only v1.1 variant
   - `Configure Build - Test Mode` - Enable test mode
   - `Configure Build - BW Dither (Fast)` - Enable fast dithering
   - `Configure Build - BW Dither (Best Quality)` - Enable best quality dithering
@@ -235,7 +235,7 @@ build_all.bat --help                    # Show all options
 ### SPI Speed Selection (`SPI_SPEED`)
 - **40MHz**: More stable/reliable operation, better for production or problematic hardware
 - **62.5MHz**: Maximum performance when hardware can handle it reliably (default)
-- Both v1.0 and v1.1a variants use the same SPI speed setting
+- Both v1.0 and v1.1 variants use the same SPI speed setting
 - Lower speeds can help resolve display issues or signal integrity problems
 
 ## Workflow Examples
@@ -244,7 +244,7 @@ build_all.bat --help                    # Show all options
 ```bash
 # Test display functionality
 ./build_all.sh --test
-# Flash dmg_boy_display_v1_1a.uf2 to test hardware
+# Flash dmg_boy_display_v1_1.uf2 to test hardware
 
 # Test BW dither quality
 ./build_all.sh --dither-best

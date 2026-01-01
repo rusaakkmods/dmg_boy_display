@@ -84,7 +84,7 @@ Game Boy LCD → PIO State Machine → CPU Processing → External Display
 // GPIO 5 (PIO pin 3): Game Boy vertical sync (VSYNC)
 ```
 
-#### Hardware Version v1.1a (Current)
+#### Hardware Version v1.1 (Current)
 ```cpp
 #define GB_PIN_BASE   9   // PIO input base pin  
 // Game Boy connections:
@@ -116,7 +116,7 @@ gblcd_program_init(pio, state_machine_id, offset, GB_PIN_BASE);
 
 // GB_PIN_BASE is defined in config.h:
 // - v1.0 hardware: GB_PIN_BASE = 2 (GPIO 2-5)
-// - v1.1a hardware: GB_PIN_BASE = 9 (GPIO 9-12)
+// - v1.1 hardware: GB_PIN_BASE = 9 (GPIO 9-12)
 ```
 
 ## Performance Features
@@ -146,18 +146,18 @@ This PIO program supports two hardware configurations:
 - **Features**: Basic Game Boy capture with manual brightness control
 - **Pin Conflicts**: None between Game Boy capture and display SPI
 
-### Version v1.1a (Current)  
+### Version v1.1 (Current)  
 - **GPIO Assignment**: 9-12 (sequential from GPIO 9)
 - **SPI Interface**: SPI0 (GPIO 3-7 for display)
 - **Features**: Advanced controls with mode switching (palette/brightness)
 - **Improvements**: Better pin separation, enhanced control interface
 
 ### Migration Notes
-When upgrading hardware from v1.0 to v1.1a:
+When upgrading hardware from v1.0 to v1.1:
 1. Update `GB_PIN_BASE` in config.h (2 → 9)
 2. Rewire Game Boy capture signals to new GPIO pins
 3. Update display SPI connections for SPI0 interface
-4. Build firmware with `-DVERSION_V1_1a` flag
+4. Build firmware with `-DVERSION_V1_1` flag
 
 The PIO program automatically adapts to the configured pin assignment through the `GB_PIN_BASE` parameter.
 

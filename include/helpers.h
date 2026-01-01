@@ -34,7 +34,7 @@ uint8_t get_brightness_from_adc();
  */
 
 /**
- * Apply brightness control - handles both v1.0 and v1.1a hardware differences
+ * Apply brightness control - handles both v1.0 and v1.1 hardware differences
  * @param lcd LCD display instance
  * @param brightness Brightness value to apply
  */
@@ -84,14 +84,14 @@ ili9341::Config init_lcd_config();
 /**
  * Update hardware controls (palette and brightness) for both hardware versions
  * v1.0: Simple palette control via trimmer
- * v1.1a: Advanced mode-switched palette/brightness control
+ * v1.1: Advanced mode-switched palette/brightness control
  * @param lcd LCD display instance
  */
 void update_hardware_controls(ili9341::ILI9341& lcd);
 
-#ifdef VERSION_V1_1a
+#ifdef VERSION_V1_1
 /**
- * I2C EEPROM Storage Functions (v1.1a only - AT24C02)
+ * I2C EEPROM Storage Functions (v1.1 only - AT24C02)
  */
 
 /**
@@ -123,7 +123,7 @@ uint8_t load_palette_from_eeprom();
  * @return Index of the default palette
  */
 uint8_t get_default_palette_index();
-#endif // VERSION_V1_1a
+#endif // VERSION_V1_1
 
 /**
  * Frame Processing Functions

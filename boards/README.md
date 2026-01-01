@@ -40,8 +40,8 @@ Controls:
 └── GPIO 29: Palette ADC (10K trimmer)
 ```
 
-### Version v1.1a (Current)
-![v1.1a Board Front](v1.1a_front.jpg) ![v1.1a Board Back](v1.1a_back.jpg)
+### Version v1.1 (Current)
+![v1.1 Board Front](v1_1_front.jpg) ![v1.1 Board Back](v1_1_back.jpg)
 
 **Key Features:**
 - **PCB Color**: Black with white silkscreen
@@ -81,7 +81,7 @@ Controls:
 
 ## Hardware Comparison
 
-| Feature | v1.0 | v1.1a |
+| Feature | v1.0 | v1.1 |
 |---------|------|-------|
 | **Microcontroller** | RP2040 Zero | RP2040 Zero |
 | **Display** | ILI9341 3.2" | ILI9341 3.2" |
@@ -104,7 +104,7 @@ The build system automatically generates firmware for both hardware versions:
 
 # Generated firmware files:
 # - dmg_boy_display_v1_0.uf2   (for v1.0 hardware)
-# - dmg_boy_display_v1_1a.uf2  (for v1.1a hardware)
+# - dmg_boy_display_v1_1.uf2   (for v1.1 hardware)
 ```
 
 ### Manual CMake Configuration
@@ -116,8 +116,8 @@ For custom builds targeting specific hardware:
 cmake -B build -DVERSION_V1_0=ON
 ninja -C build
 
-# Build for v1.1a hardware  
-cmake -B build -DVERSION_V1_1a=ON
+# Build for v1.1 hardware  
+cmake -B build -DVERSION_V1_1=ON
 ninja -C build
 ```
 
@@ -132,7 +132,7 @@ Both versions connect to the Game Boy LCD flex cable, but use different GPIO pin
 - Ensure proper signal integrity with short wires
 - No level shifting required (3.3V compatible)
 
-**v1.1a Connections:**
+**v1.1 Connections:**
 - Connect Game Boy LCD pins to GPIO 9-12
 - Improved pin separation reduces crosstalk
 - Better routing for signal integrity
@@ -146,7 +146,7 @@ Both versions use the same ILI9341 display but different SPI interfaces:
 - Standard SPI wiring
 - Manual backlight control
 
-**v1.1a Display:**
+**v1.1 Display:**
 - Uses SPI0 interface (GPIO 3-7)
 - Optimized for better performance
 - PWM backlight control
@@ -158,7 +158,7 @@ Both versions use the same ILI9341 display but different SPI interfaces:
 - Direct palette selection
 - Simple, reliable operation
 
-**v1.1a Controls:**
+**v1.1 Controls:**
 - 10K potentiometer on GPIO 29 (multi-function)
 - Mode switch on GPIO 2 (palette/brightness)
 - Advanced control interface
@@ -176,7 +176,7 @@ Both versions use the same ILI9341 display but different SPI interfaces:
 1. Identify your hardware version using photos above
 2. Flash the correct firmware file:
    - v1.0 hardware → `dmg_boy_display_v1_0.uf2`
-   - v1.1a hardware → `dmg_boy_display_v1_1a.uf2`
+   - v1.1 hardware → `dmg_boy_display_v1_1.uf2`
 
 ### Hardware Identification
 
@@ -185,15 +185,15 @@ If unsure about your hardware version:
 1. **Check GPIO Usage:**
    - Measure continuity from Game Boy connector to GPIO pins
    - v1.0: Game Boy signals on GPIO 2-5
-   - v1.1a: Game Boy signals on GPIO 9-12
+   - v1.1: Game Boy signals on GPIO 9-12
 
 2. **Visual Inspection:**
    - v1.0: Simpler layout, single potentiometer
-   - v1.1a: Additional switches, more complex layout
+   - v1.1: Additional switches, more complex layout
 
 3. **SPI Interface:**
    - v1.0: Display connected to GPIO 9-13
-   - v1.1a: Display connected to GPIO 3-7
+   - v1.1: Display connected to GPIO 3-7
 
 ### Performance Issues
 
@@ -215,7 +215,7 @@ If unsure about your hardware version:
 - ✅ Display test patterns
 - ✅ Simple brightness control (on/off)
 
-### v1.1a Features  
+### v1.1 Features  
 - ✅ All v1.0 features
 - ✅ Advanced mode switching (palette/brightness)
 - ✅ PWM brightness control
@@ -248,4 +248,4 @@ For hardware-specific issues:
 
 ---
 
-**Note**: Always use the firmware that matches your hardware version. Cross-flashing (using v1.0 firmware on v1.1a hardware or vice versa) will result in incorrect operation and may damage the hardware.
+**Note**: Always use the firmware that matches your hardware version. Cross-flashing (using v1.0 firmware on v1.1 hardware or vice versa) will result in incorrect operation and may damage the hardware.

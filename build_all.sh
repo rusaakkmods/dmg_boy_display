@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for both v1.0 and v1.1a variants with configurable options
+# Build script for both v1.0 and v1.1 variants with configurable options
 
 print_usage() {
     echo "Usage: $0 [options]"
@@ -106,9 +106,9 @@ ninja
 echo ""
 echo "Build Results:"
 echo "=============="
-ls -la *.uf2 | grep -E "(v1_0|v1_1a)"
+ls -la *.uf2 | grep -E "(v1_0|v1_1)"
 
 echo ""
 echo "Files ready for flashing:"
 echo "  dmg_boy_display_v1_0.uf2   - For v1.0 hardware"
-echo "  dmg_boy_display_v1_1a.uf2  - For v1.1a hardware"
+echo "  dmg_boy_display_v1_1.uf2   - For v1.1 hardware"
