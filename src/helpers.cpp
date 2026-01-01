@@ -4,6 +4,7 @@
 #include "scaler.hpp" 
 #include "dither.hpp"
 #include "palettes.hpp"
+#include "font5x7.h"
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -40,6 +41,75 @@ uint8_t get_brightness_from_adc() {
     uint16_t adc_value = adc_read();
     uint8_t brightness = BRIGHTNESS_MIN + ((adc_value * BRIGHTNESS_RANGE) / ADC_MAX_VALUE);
     return brightness;
+}
+
+void draw_palette_osd(uint16_t* buffer, uint8_t palette_index, uint16_t fg_color, uint16_t bg_color) {
+    if (palette_index >= NUM_PALETTES) return;
+    
+    const char* palette_name = PALETTE_NAMES[palette_index];
+    const char prefix[] = "Palette: ";
+    const int char_width = 6;  // 5 pixels + 1 spacing
+    const int char_height = 8; // 7 pixels + 1 spacing
+    const int padding = 2;
+    const int start_x = 4;
+    const int start_y = 4;
+    
+    int text_len = strlen(prefix) + strlen(palette_name);
+    int box_width = text_len * char_width + padding * 2;
+    int box_height = char_height + padding * 2;
+    
+    // Draw background box
+    for (int by = 0; by < box_height; by++) {
+        for (int bx = 0; bx < box_width; bx++) {
+            int px = start_x + bx;
+            int py = start_y + by;
+            if (px < SCALED_W && py < SCALED_H) {
+                buffer[py * SCALED_W + px] = bg_color;
+            }
+        }
+    }
+    
+    // Draw text
+    int cursor_x = start_x + padding;
+    int cursor_y = start_y + padding;
+    
+    // Draw "Palette: "
+    for (int i = 0; prefix[i] != '\0'; i++) {
+        char c = prefix[i];
+        uint8_t glyph_idx = get_font_index(c);
+        const uint8_t* glyph = font5x7[glyph_idx];
+        for (int cx = 0; cx < 5; cx++) {
+            for (int cy = 0; cy < 7; cy++) {
+                if (glyph[cx] & (1 << cy)) {
+                    int px = cursor_x + cx;
+                    int py = cursor_y + cy;
+                    if (px < SCALED_W && py < SCALED_H) {
+                        buffer[py * SCALED_W + px] = fg_color;
+                    }
+                }
+            }
+        }
+        cursor_x += char_width;
+    }
+    
+    // Draw palette name
+    for (int i = 0; palette_name[i] != '\0'; i++) {
+        char c = palette_name[i];
+        uint8_t glyph_idx = get_font_index(c);
+        const uint8_t* glyph = font5x7[glyph_idx];
+        for (int cx = 0; cx < 5; cx++) {
+            for (int cy = 0; cy < 7; cy++) {
+                if (glyph[cx] & (1 << cy)) {
+                    int px = cursor_x + cx;
+                    int py = cursor_y + cy;
+                    if (px < SCALED_W && py < SCALED_H) {
+                        buffer[py * SCALED_W + px] = fg_color;
+                    }
+                }
+            }
+        }
+        cursor_x += char_width;
+    }
 }
 
 #ifdef VERSION_V1_1
@@ -126,7 +196,7 @@ ili9341::Config init_lcd_config() {
 }
 
 // Palette and Color Management
-void update_hardware_controls(ili9341::ILI9341& lcd) {
+void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer, bool* show_osd) {
 #ifdef VERSION_V1_0
     // v1.0: Simple palette control via trimmer (if palette selection enabled)
     #if !defined(ENABLE_BW_DITHER) && !defined(DISABLE_PALETTE_SELECTION)
@@ -169,6 +239,8 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
     
     static uint8_t last_brightness_candidate = 0xFF;
     static bool was_in_brightness_mode = false;
+    static uint32_t osd_display_time = 0;
+    const uint32_t OSD_DURATION_MS = 2000;  // Show OSD for 2 seconds
     
     if (palette_mode) {
         // Palette selection mode (only if not using BW dither)
@@ -180,6 +252,8 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
                 last_palette_candidate = current_palette_index;
                 palette_on_mode_entry = current_palette_index;
                 was_in_palette_mode = true;
+                osd_display_time = to_ms_since_boot(get_absolute_time());
+                if (show_osd) *show_osd = true;
             }
             
             // Only change palette if pot value has changed while in palette mode
@@ -187,6 +261,19 @@ void update_hardware_controls(ili9341::ILI9341& lcd) {
                 gb_colors = PALETTE_LIST[current_palette_index];
                 last_palette_index = current_palette_index;
                 last_palette_candidate = current_palette_index;
+                osd_display_time = to_ms_since_boot(get_absolute_time());
+                if (show_osd) *show_osd = true;
+            }
+            
+            // Check if OSD should still be displayed
+            if (show_osd && *show_osd) {
+                uint32_t now = to_ms_since_boot(get_absolute_time());
+                if (now - osd_display_time > OSD_DURATION_MS) {
+                    *show_osd = false;
+                } else if (scaled_buffer) {
+                    // Draw OSD using palette colors
+                    draw_palette_osd(scaled_buffer, last_palette_index, gb_colors[0], gb_colors[3]);
+                }
             }
         #endif
         

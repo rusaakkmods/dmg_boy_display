@@ -84,10 +84,21 @@ ili9341::Config init_lcd_config();
 /**
  * Update hardware controls (palette and brightness) for both hardware versions
  * v1.0: Simple palette control via trimmer
- * v1.1: Advanced mode-switched palette/brightness control
+ * v1.1: Advanced mode-switched palette/brightness control with OSD support
  * @param lcd LCD display instance
+ * @param scaled_buffer Optional buffer to draw OSD on (for v1.1 palette mode)
+ * @param show_osd Optional pointer to flag indicating whether OSD should be shown (v1.1 only)
  */
-void update_hardware_controls(ili9341::ILI9341& lcd);
+void update_hardware_controls(ili9341::ILI9341& lcd, uint16_t* scaled_buffer = nullptr, bool* show_osd = nullptr);
+
+/**
+ * Draw OSD (On-Screen Display) showing palette name
+ * @param buffer 16-bit RGB565 frame buffer (256x230)
+ * @param palette_index Index of currently selected palette
+ * @param fg_color Foreground color (RGB565)
+ * @param bg_color Background color (RGB565)
+ */
+void draw_palette_osd(uint16_t* buffer, uint8_t palette_index, uint16_t fg_color, uint16_t bg_color);
 
 #ifdef VERSION_V1_1
 /**

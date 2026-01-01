@@ -27,6 +27,29 @@ const uint16_t* const PALETTE_LIST[] = {
     GRAYSCALE
 };
 
+const char* const PALETTE_NAMES[] = {
+    "modern",
+    "adventurer",
+    "sgb",
+    "lcd",
+    "cloudy",
+    "vintage",
+    "blue_hue",
+    "highlight",
+    "neon",
+    "peach",
+    "modern_2",
+    "romance",
+    "retro",
+    "gray",
+    "red_pastel",
+    "teal",
+    "yellow",
+    "green",
+    "grayscale-",
+    "grayscale"
+};
+
 const size_t NUM_PALETTES = sizeof(PALETTE_LIST) / sizeof(PALETTE_LIST[0]);
 
 #ifdef ENABLE_BW_DITHER

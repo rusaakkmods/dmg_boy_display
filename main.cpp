@@ -108,9 +108,14 @@ int main() {
         scale_frame(screenBuffer, scaledBuf, xmap, ymap);
         apply_dithering(scaledBuf);
         
-        lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
-        
+#ifdef VERSION_V1_1
+        static bool show_osd = false;
+        update_hardware_controls(lcd, scaledBuf, &show_osd);
+#else
         update_hardware_controls(lcd);
+#endif
+        
+        lcd.drawImage(X_OFF, Y_OFF, SCALED_W, SCALED_H, scaledBuf);
         
         vSyncFallingEdgeDetected = false;
     }

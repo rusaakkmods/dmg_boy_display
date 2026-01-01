@@ -31,6 +31,7 @@ static const uint16_t ADVENTURER[4] = {0xbfbf, 0x862d, 0xffbb, 0x624a};
 
 // Palette list and management
 extern const uint16_t* const PALETTE_LIST[];
+extern const char* const PALETTE_NAMES[];
 extern const size_t NUM_PALETTES;
 
 // Dither configuration
