@@ -64,8 +64,13 @@ bool HAL::init(const Config& config) {
     gpio_init(_config.pin_bl);
     gpio_set_function(_config.pin_bl, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(_config.pin_bl);
-    pwm_set_wrap(slice_num, 255);  // 8-bit resolution (0-255)
-    pwm_set_clkdiv(slice_num, 125.0f * 4);  // 125MHz / (256 * 125 * 4) ≈ 977 Hz (close to 1 kHz)
+    
+    // Set PWM frequency to 25 kHz to avoid audible humming
+    // System clock: 125 MHz
+    // Target frequency: 25 kHz  
+    // wrap = (125,000,000 / 25,000) - 1 = 4999
+    pwm_set_wrap(slice_num, 4999);  // 25 kHz PWM frequency
+    pwm_set_clkdiv(slice_num, 1.0f);  // No clock division
     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(_config.pin_bl), 0);  // Start at 0
     pwm_set_enabled(slice_num, true);
     
@@ -216,8 +221,10 @@ void HAL::setBacklight(bool on) {
 }
 
 void HAL::setBrightness(uint8_t brightness) {
+    // Scale 0-255 brightness to 0-4999 PWM level (25 kHz frequency)
+    uint16_t pwm_level = (brightness * 4999) / 255;
     uint slice_num = pwm_gpio_to_slice_num(_config.pin_bl);
-    pwm_set_chan_level(slice_num, pwm_gpio_to_channel(_config.pin_bl), brightness);
+    pwm_set_chan_level(slice_num, pwm_gpio_to_channel(_config.pin_bl), pwm_level);
 }
 
 void HAL::delay(uint32_t ms) {
